@@ -22,49 +22,63 @@ CREATE TABLE IF NOT EXISTS DAILY_STOCK_PRICE
   open_int         INTEGER
 );
 
-CREATE INDEX IF NOT EXISTS idx_daily_stock_price ON DAILY_STOCK_PRICE (symbol, dt);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_daily_stock_price ON DAILY_STOCK_PRICE (symbol, dt);
 
+drop table if exists DAILY_STOCK_STATS; 
 CREATE TABLE IF NOT EXISTS DAILY_STOCK_STATS
 (
   symbol           VARCHAR(10),
   dt               VARCHAR(10),
+  start_dt         VARCHAR(10),
   open             REAL,
   high             REAL,
   low              REAL,
   close            REAL,
   volume           REAL,
-  adj_close        REAL,
   prev_open        REAL,
   prev_high       REAL,
   prev_low        REAL,
   prev_close      REAL,
-  prev_adj_close   REAL,
   prev_volume      REAL,
-  rsi14          REAL,  
-  sma03          REAL,
-  sma05          REAL,  
-  sma10          REAL,
-  sma20          REAL,      
-  sma50          REAL,
-  sma100         REAL,
-  sma150         REAL,
-  sma200         REAL,
-  roc125        REAL,
-  roc20        REAL,
-  ema12         REAL,
-  ema26         REAL,
-  ema09         REAL,
-  ppo01        REAL,
-  sctr01        REAL
+  roc020           REAL,  
+  roc125           REAL,
+  rsi014           REAL,
+  sma200           REAL,
+  sma150           REAL,
+  sma100           REAL,
+  sma050           REAL,
+  sma020           REAL,
+  sma010           REAL,
+  sma005           REAL,
+  sma003           REAL,
+  ema050           REAL,
+  ema200           REAL,
+  ema200pref       REAL,  
+  sma200pref       REAL,
+  ema500pref       REAL,
+  sma50pref        REAL,
+  rsi14sctr       REAL,
+  ppo01sctr       REAL,
+  roc125sctr     REAL,
+  histDay        REAL, 
+  chg_pct_1d    REAL, 
+  chg_pct_5d    REAL, 
+  chg_pct_10d   REAL,
+  chg_pct_20d   REAL,
+  chg_pct_50d   REAL,
+  chg_pct_100d  REAL,
+  sma10turnover REAL,
+  sma20turnover REAL,
+  sma50turnover REAL
 );
 
-CREATE INDEX IF NOT EXISTS idx_daily_stock_stats ON DAILY_STOCK_STATS (symbol, dt);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_daily_stock_stats ON DAILY_STOCK_STATS (symbol, dt);
 
 `);
 
 const usPath = "C:/Users/user/Downloads/d_us_txt_20250522/data/daily/us";
 const hkPath = "C:/Users/user/Downloads/d_hk_txt_20250519/data/daily/hk/hkex stocks";
-const files = helper.traverseDirectory(usPath);
+const files = helper.traverseDirectory(hkPath);
 
 const start = async function() {
   const fileCount = await traverseDir(files);
