@@ -4,26 +4,100 @@ const { parse } = require("csv-parse");
 const taIndicator = require('@debut/indicators');
 const { createTrend } = require('trendline');
 const helper = require("./helper");
-const db = require('better-sqlite3')('data/hkex-market-breadth.db', {});
+const config = require('config');
+
+const db = require('better-sqlite3')(config.db.sqlite.file, {});
 db.pragma('journal_mode = WAL');
 
-const queryDate = '20250513';
-const querySymbol = '';// = '9992.HK';
+const queryDate = '20250516'; //20250516
+const querySymbol = '9992.HK';// = '9992.HK';
 
-// format sql
-var sqlStr = 'SELECT symbol FROM DAILY_STOCK_PRICE where dt = ?';
-if(! helper.isEmpty(querySymbol)) {
-    sqlStr = sqlStr + ' and symbol = ?';
+// process data by dates
+console.log("Start processing data. file path: " + config.db.sqlite.file);
+helper.isEmpty(queryDate) ? queryProcessDates() : processSingleDate(queryDate, querySymbol, 0);
+updateMarketStats();
+
+/**
+ * Process all dates in the database
+ */
+function queryProcessDates() {
+    var count = 0;
+    // query db
+    const sqlDateStr = 'SELECT dt FROM DAILY_STOCK_PRICE group by dt order by dt desc limit 200';
+    const dateStmt = db.prepare(sqlDateStr);
+    const dates = dateStmt.all();
+    if (dates.length > 0) { 
+        dates.forEach((date) => {
+            processSingleDate(date.dt, querySymbol, count);
+        });
+    }
 }
 
-// query db
-const stmt = db.prepare(sqlStr);
-const symbols = stmt.all(queryDate);
-for (const symbol of symbols) {
-    var priceStats = calculateStatistics(symbol, queryDate);
-    insertPriceStats(priceStats);
+/**
+ * Process a single date
+ * @param {*} queryDate 
+ * @param {*} querySymbol 
+ */
+function processSingleDate(queryDate, querySymbol, count) {
+    // format sql
+    var sqlSymbolByDateStr = 'SELECT symbol FROM DAILY_STOCK_PRICE where dt = ?';
+    if (!helper.isEmpty(querySymbol)) {
+        sqlSymbolByDateStr = sqlSymbolByDateStr + ' and symbol = ?';
+    }
+
+    // query db
+    const stmt = db.prepare(sqlSymbolByDateStr);
+    const symbols = helper.isEmpty(querySymbol) ? stmt.all(queryDate) : stmt.all(queryDate, querySymbol);
+
+    for (const symbol of symbols) {
+        var priceStats = calculateStatistics(symbol, queryDate);
+        insertPriceStats(priceStats);
+        if(count++ % 1000 == 0) {
+            console.log("Processed " + count + " stocks for date: " + queryDate);
+        }
+    }
 }
 
+/**
+ * update market stats
+ */
+function updateMarketStats() {
+    const sqlMarketStats = 'select dt, ' +
+        'sum(case when chg_pct_1d >= 4 then 1 else 0 end)  up4pct1d, ' +
+        'sum(case when chg_pct_1d<= -4 then 1 else 0 end)  dn4pct1d, ' +
+        'sum(case when chg_pct_100d >= 25 then 1 else 0 end)  up25pctin100d, ' +
+        'sum(case when chg_pct_100d<= -25 then 1 else 0 end)  dn25pctin100d, ' +
+        'sum(case when chg_pct_20d >= 25 then 1 else 0 end)  up25pctin20d, ' +
+        'sum(case when chg_pct_20d<= -25 then 1 else 0 end)  dn25pctin20d, ' +
+        'sum(case when chg_pct_20d >= 50 then 1 else 0 end)  up50pctin20d, ' +
+        'sum(case when chg_pct_20d<= -50 then 1 else 0 end)  dn50pctin20d, ' +
+        'count(1) noofstocks, ' +
+        'round(sum(above_200d_sma) / count(1) * 100,2) above200smapct, ' +
+        'round(sum(above_150d_sma) / count(1) * 100,2) above150smapct, ' +
+        'round(sum(above_20d_sma) / count(1) * 100,2) above20smapct ' +
+        'from DAILY_STOCK_STATS ' +
+        'group by dt ' +
+        'order by dt desc ';
+    const stmt = db.prepare(sqlMarketStats);
+    const marketStats = stmt.all();
+    
+    const INSERT_SQL = "REPLACE INTO DAILY_MARKET_STATS (dt, up4pct1d, dn4pct1d, up25pctin100d, dn25pctin100d, up25pctin20d, dn25pctin20d, up50pctin20d, dn50pctin20d, noofstocks, above200smapct, above150smapct, above20smapct) " +
+        "VALUES (?,?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    const stmtInsert = db.prepare(INSERT_SQL);
+    marketStats.forEach((marketStat) => {
+        const info = stmtInsert.run(marketStat.dt, marketStat.up4pct1d, marketStat.dn4pct1d, marketStat.up25pctin100d, marketStat.dn25pctin100d, marketStat.up25pctin20d, marketStat.dn25pctin20d, marketStat.up50pctin20d, marketStat.dn50pctin20d, marketStat.noofstocks, marketStat.above200smapct, marketStat.above150smapct, marketStat.above20smapct);
+        if (info.changes <= 0) {
+            console.log("[ERROR] Inserted " + marketStat.dt);
+        }
+    });
+}
+
+/**
+ * Calculate statistics for a single stock price on a specific date
+ * @param {*} stockPrice 
+ * @param {*} queryDate 
+ * @returns 
+ */
 function calculateStatistics(stockPrice, queryDate) {
     const stmt = db.prepare('SELECT * FROM DAILY_STOCK_PRICE where symbol = ? and dt <= ? order by dt desc limit 200');
     const priceHistory = stmt.all(stockPrice.symbol, queryDate);
@@ -97,20 +171,33 @@ function calculateStatistics(stockPrice, queryDate) {
         chg_pct_100d: 0,
         sma10turnover: 0,
         sma20turnover: 0,
-        sma50turnover: 0
+        sma50turnover: 0,
+        above_200d_sma: 0,
+        above_150d_sma: 0,
+        above_100d_sma: 0,
+        above_50d_sma: 0,
+        above_20d_sma: 0,
+        above_10d_sma: 0,
+        above_5d_sma: 0
     }
 
     // calculate technical indicators
     calculateTechnicalIndicator(priceHistory, priceStats, calculators);
     calculateSctr(priceStats);
 
-    if(priceStats.sctr >= 75) {
-        console.log(stockPrice.symbol + " price history length: " + priceHistory.length + " sctr: " + priceStats.sctr + " dt: " + priceStats.dt);
-    }
+    // if(priceStats.sctr >= 75) {
+    //    console.log(stockPrice.symbol + " price history length: " + priceHistory.length + " sctr: " + priceStats.sctr + " dt: " + priceStats.dt);
+    // }
     
     return priceStats;
 }
 
+/**
+ * Calculate technical indicators for a stock price
+ * @param {*} priceHistory 
+ * @param {*} priceStats 
+ * @param {*} calculators 
+ */
 function calculateTechnicalIndicator(priceHistory, priceStats, calculators) {
     var lastQuote = null;
 
@@ -134,35 +221,42 @@ function calculateTechnicalIndicator(priceHistory, priceStats, calculators) {
 
         if (priceHistory.length >= 5) {
             priceStats.sma05 = calculators.sma005Ind.nextValue(history.close);
+            priceStats.close > priceStats.sma05 ? priceStats.above_5d_sma = 1 : priceStats.above_5d_sma = 0;
         }
 
         if (priceHistory.length >= 10) {
             priceStats.sma10 = calculators.sma010Ind.nextValue(history.close);
             priceStats.sma10turnover = calculators.sma010TurnoverInd.nextValue(history.close * history.volume);
+            priceStats.close > priceStats.sma10 ? priceStats.above_10d_sma = 1 : priceStats.above_10d_sma = 0;
         }
 
         if (priceHistory.length >= 20) {
             priceStats.sma20 = calculators.sma020Ind.nextValue(history.close);
             priceStats.sma20turnover = calculators.sma020TurnoverInd.nextValue(history.close * history.volume);
+            priceStats.close > priceStats.sma20 ? priceStats.above_20d_sma = 1 : priceStats.above_20d_sma = 0;
         }
 
         if (priceHistory.length >= 50) {
             priceStats.sma50 = calculators.sma050Ind.nextValue(history.close);
             priceStats.ema50 = calculators.ema050Ind.nextValue(history.close);
             priceStats.sma50turnover = calculators.sma050TurnoverInd.nextValue(history.close * history.volume);
+            priceStats.close > priceStats.sma50 ? priceStats.above_50d_sma = 1 : priceStats.above_50d_sma = 0;
         }
 
         if (priceHistory.length >= 100) {
             priceStats.sma100 = calculators.sma100Ind.nextValue(history.close);
+            priceStats.close > priceStats.sma100 ? priceStats.above_100d_sma = 1 : priceStats.above_100d_sma = 0;
         }
 
         if (priceHistory.length >= 150) {
             priceStats.sma150 = calculators.sma150Ind.nextValue(history.close);
+            priceStats.close > priceStats.sma150 ? priceStats.above_150d_sma = 1 : priceStats.above_150d_sma = 0;
         }
 
         if (priceHistory.length >= 200) {
             priceStats.sma200 = calculators.sma200Ind.nextValue(history.close);
             priceStats.ema200 = calculators.ema200Ind.nextValue(history.close);
+            priceStats.close > priceStats.sma200 ? priceStats.above_200d_sma = 1 : priceStats.above_200d_sma = 0;
         }
 
         if (priceHistory.length >= 26) {
@@ -193,10 +287,17 @@ function calculateTechnicalIndicator(priceHistory, priceStats, calculators) {
         lastQuote = history;
     });
 
+
+
     // calculate chg_pct
     calculateChgPct(priceHistory, priceStats);
 }
 
+/**
+ * Calculate the percentage change for a stock price over different time periods
+ * @param {*} priceHistory 
+ * @param {*} priceStats 
+ */
 function calculateChgPct(priceHistory, priceStats) {
     priceHistory.reverse();
 
@@ -221,6 +322,10 @@ function calculateChgPct(priceHistory, priceStats) {
     }
 }
 
+/**
+ * Calculate the short-term trend for a stock price
+ * @param {*} priceStats 
+ */
 function calculateSctr(priceStats) {
     // long term indicator weighting
     if(priceStats.sma200 != 0) {
@@ -252,6 +357,11 @@ function calculateSctr(priceStats) {
     priceStats.sctr = (0.60 * (priceStats.ema200pref + priceStats.roc125sctr) + 0.30 * (priceStats.ema50pref + priceStats.roc20sctr) + 0.10 * (priceStats.ppo01sctr + priceStats.rsi14sctr));
 }
 
+/**
+ * Calculate the Percentage Price Oscillator (PPO) for a stock price
+ * @param {*} priceStats 
+ * @returns 
+ */
 function calculatePPO01(priceStats) {
     if (helper.isEmpty(priceStats.macd01.histogram) || helper.isEmpty(priceStats.macd02.histogram) || helper.isEmpty(priceStats.macd03.histogram)) {
         return 0;
@@ -279,9 +389,13 @@ function calculatePPO01(priceStats) {
     return ppo01Score;
 }
 
+/**
+ * Insert price statistics into the database
+ * @param {*} priceStats 
+ */
 function insertPriceStats(priceStats) {
-    const INSERT_SQL = "REPLACE INTO DAILY_STOCK_STATS (symbol, dt, start_dt, open, high, low, close, volume, prev_open, prev_high, prev_low, prev_close, prev_volume, roc020, roc125, rsi014, sma200, sma150, sma100, sma050, sma020, sma010, sma005, sma003, ema050, ema200, ema200pref, sma200pref, ema500pref, sma50pref, rsi14sctr, ppo01sctr, roc125sctr, histDay, chg_pct_1d, chg_pct_5d, chg_pct_10d, chg_pct_20d, chg_pct_50d, chg_pct_100d, sma10turnover, sma20turnover, sma50turnover ) " + 
-                       "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    const INSERT_SQL = "REPLACE INTO DAILY_STOCK_STATS (symbol, dt, start_dt, open, high, low, close, volume, prev_open, prev_high, prev_low, prev_close, prev_volume, roc020, roc125, rsi014, sma200, sma150, sma100, sma050, sma020, sma010, sma005, sma003, ema050, ema200, ema200pref, sma200pref, ema500pref, sma50pref, rsi14sctr, ppo01sctr, roc125sctr, histDay, chg_pct_1d, chg_pct_5d, chg_pct_10d, chg_pct_20d, chg_pct_50d, chg_pct_100d, sma10turnover, sma20turnover, sma50turnover, above_200d_sma ,above_150d_sma ,above_100d_sma ,above_50d_sma  ,above_20d_sma  ,above_10d_sma  ,above_5d_sma ) " +   
+                       "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     const stmt = db.prepare(INSERT_SQL);
     const info = stmt.run(priceStats.symbol, priceStats.dt, priceStats.start_dt,
@@ -294,11 +408,13 @@ function insertPriceStats(priceStats) {
         priceStats.ema200pref, priceStats.sma50pref, priceStats.rsi14sctr, priceStats.ppo01sctr,
         priceStats.roc125sctr, priceStats.histDay, priceStats.chg_pct_1d, priceStats.chg_pct_5d,
         priceStats.chg_pct_10d, priceStats.chg_pct_20d, priceStats.chg_pct_50d, priceStats.chg_pct_100d,
-        priceStats.sma10turnover, priceStats.sma20turnover, priceStats.sma50turnover);
+        priceStats.sma10turnover, priceStats.sma20turnover, priceStats.sma50turnover, 
+        priceStats.above_200d_sma, priceStats.above_150d_sma, priceStats.above_100d_sma,
+        priceStats.above_50d_sma, priceStats.above_20d_sma, priceStats.above_10d_sma, priceStats.above_5d_sma 
+    );
 
-
-    if (info.changes > 0) {
-        console.log("Inserted " + priceStats.symbol + " " + priceStats.dt + " successfully.");
+    if (info.changes <= 0) {
+        console.log("[ERROR] Inserted " + priceStats.symbol + " " + priceStats.dt);
     }
 
 }

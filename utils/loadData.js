@@ -69,7 +69,14 @@ CREATE TABLE IF NOT EXISTS DAILY_STOCK_STATS
   chg_pct_100d  REAL,
   sma10turnover REAL,
   sma20turnover REAL,
-  sma50turnover REAL
+  sma50turnover REAL,
+  above_200d_sma REAL,
+  above_150d_sma REAL,
+  above_100d_sma REAL,
+  above_50d_sma  REAL,
+  above_20d_sma  REAL,
+  above_10d_sma  REAL,
+  above_5d_sma   REAL
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_daily_stock_stats ON DAILY_STOCK_STATS (symbol, dt);
