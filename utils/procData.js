@@ -2,7 +2,7 @@ const taIndicator = require('@debut/indicators');
 const { createTrend } = require('trendline');
 const helper = require("./helper");
 const config = require('config');
-const dbHelper = require('./dbConnHelper.js');
+const dbHelper = require('./pgDbConnHelper.js');
 
 const db = require('better-sqlite3')(config.db.sqlite.file, {});
 db.pragma('journal_mode = WAL');
@@ -15,22 +15,42 @@ console.log("Start processing data. file path: " + config.db.sqlite.file);
 helper.isEmpty(queryDate) ? queryProcessDates() : processSingleDate(queryDate, querySymbol);
 updateMarketStats();
 aivenDbUpdate();
+aivenDbUpdateForDailyStockStats();
 
 console.log("Data processing completed.");
 
 async function aivenDbUpdate() {
-      var version = await dbHelper.getAivenPgVersion();
-      console.log("Aiven Version: ", version);
+    var version = await dbHelper.getAivenPgVersion();
+    console.log("Aiven Version: ", version);
 
-      const sqlMarketStats = 'select dt, up4pct1d, dn4pct1d, up25pctin100d, dn25pctin100d, up25pctin20d, dn25pctin20d, up50pctin20d, dn50pctin20d, noofstocks, above200smapct, above150smapct, above20smapct from daily_market_stats order by dt desc';
-      const marketStats = db.prepare(sqlMarketStats).all();
-      for (const marketStat of marketStats) {
-          // var result = await dbHelper.insertMarketStats(marketStat);
-          // console.log("Inserted market stats: ", result);
-      }
+    const sqlMarketStats =
+        `select dt, up4pct1d, dn4pct1d, up25pctin100d, dn25pctin100d, up25pctin20d, dn25pctin20d, up50pctin20d, dn50pctin20d, 
+         noofstocks, above200smapct, above150smapct, above20smapct 
+         from daily_market_stats order by dt desc`;
+    const marketStats = db.prepare(sqlMarketStats).all();
+    await dbHelper.updateMarketStats(marketStats);
 
-      console.log("Aiven market stats updated. Total records: " + marketStats.length);
-      console.log("Aiven db update completed.");
+    console.log("Aiven market stats updated. Total records: " + marketStats.length);
+    console.log("Aiven db update completed.");
+}
+
+async function aivenDbUpdateForDailyStockStats() {
+    const sqlDailyStockStats = `
+        select * from DAILY_STOCK_STATS
+        where dt in (
+            select dt from DAILY_STOCK_STATS
+            group by dt
+            order by dt DESC
+            limit 1
+        )
+        order by dt DESC`;
+
+    const dailyStockStats = db.prepare(sqlDailyStockStats).all();
+    console.log("Aiven daily stock stats: ", dailyStockStats.length);
+
+    dbHelper.updateDailyStockStats(dailyStockStats);
+    console.log("Aiven daily stock stats updated. Total records: " + dailyStockStats.length);
+    console.log("Aiven db update for daily stock stats completed.");
 }
 
 /**
