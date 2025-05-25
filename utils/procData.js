@@ -1,6 +1,3 @@
-const fs = require("fs");
-const util = require("util");
-const { parse } = require("csv-parse");
 const taIndicator = require('@debut/indicators');
 const { createTrend } = require('trendline');
 const helper = require("./helper");
@@ -19,6 +16,8 @@ helper.isEmpty(queryDate) ? queryProcessDates() : processSingleDate(queryDate, q
 updateMarketStats();
 aivenDbUpdate();
 
+console.log("Data processing completed.");
+
 async function aivenDbUpdate() {
       var version = await dbHelper.getAivenPgVersion();
       console.log("Aiven Version: ", version);
@@ -26,8 +25,12 @@ async function aivenDbUpdate() {
       const sqlMarketStats = 'select dt, up4pct1d, dn4pct1d, up25pctin100d, dn25pctin100d, up25pctin20d, dn25pctin20d, up50pctin20d, dn50pctin20d, noofstocks, above200smapct, above150smapct, above20smapct from daily_market_stats order by dt desc';
       const marketStats = db.prepare(sqlMarketStats).all();
       for (const marketStat of marketStats) {
-          await dbHelper.insertMarketStats(marketStat);
+          // var result = await dbHelper.insertMarketStats(marketStat);
+          // console.log("Inserted market stats: ", result);
       }
+
+      console.log("Aiven market stats updated. Total records: " + marketStats.length);
+      console.log("Aiven db update completed.");
 }
 
 /**
