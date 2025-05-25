@@ -9,26 +9,35 @@ const config = require('config');
 const db = require('better-sqlite3')(config.db.sqlite.file, {});
 db.pragma('journal_mode = WAL');
 
-const queryDate = '20250516'; //20250516
-const querySymbol = '9992.HK';// = '9992.HK';
+const queryDate = ''; //20250516
+const querySymbol = '';// = '9992.HK';
 
 // process data by dates
 console.log("Start processing data. file path: " + config.db.sqlite.file);
-helper.isEmpty(queryDate) ? queryProcessDates() : processSingleDate(queryDate, querySymbol, 0);
+helper.isEmpty(queryDate) ? queryProcessDates() : processSingleDate(queryDate, querySymbol);
 updateMarketStats();
 
 /**
  * Process all dates in the database
  */
 function queryProcessDates() {
-    var count = 0;
     // query db
-    const sqlDateStr = 'SELECT dt FROM DAILY_STOCK_PRICE group by dt order by dt desc limit 200';
+    const sqlDateStr =
+        "select dt from ( " +
+        "SELECT dt FROM DAILY_STOCK_PRICE " +
+        "group by dt " +
+        "order by dt desc " +
+        "limit 200 " +
+        ") " +
+        "except " +
+        "select dt from daily_market_stats";
+
     const dateStmt = db.prepare(sqlDateStr);
     const dates = dateStmt.all();
     if (dates.length > 0) { 
         dates.forEach((date) => {
-            processSingleDate(date.dt, querySymbol, count);
+            var count = processSingleDate(date.dt, querySymbol);
+            console.log(date.dt + " processed. count: " + count);
         });
     }
 }
@@ -38,9 +47,14 @@ function queryProcessDates() {
  * @param {*} queryDate 
  * @param {*} querySymbol 
  */
-function processSingleDate(queryDate, querySymbol, count) {
+function processSingleDate(queryDate, querySymbol) {
     // format sql
-    var sqlSymbolByDateStr = 'SELECT symbol FROM DAILY_STOCK_PRICE where dt = ?';
+    var count = 0;
+    var sqlSymbolByDateStr =
+      "SELECT DAILY_STOCK_PRICE.symbol FROM DAILY_STOCK_PRICE, stock " +
+      "WHERE DAILY_STOCK_PRICE.dt = ? " +  
+      "AND DAILY_STOCK_PRICE.symbol = stock.symbol ";
+
     if (!helper.isEmpty(querySymbol)) {
         sqlSymbolByDateStr = sqlSymbolByDateStr + ' and symbol = ?';
     }
@@ -52,10 +66,10 @@ function processSingleDate(queryDate, querySymbol, count) {
     for (const symbol of symbols) {
         var priceStats = calculateStatistics(symbol, queryDate);
         insertPriceStats(priceStats);
-        if(count++ % 1000 == 0) {
-            console.log("Processed " + count + " stocks for date: " + queryDate);
-        }
+        count++;
     }
+
+    return count;
 }
 
 /**
@@ -394,8 +408,8 @@ function calculatePPO01(priceStats) {
  * @param {*} priceStats 
  */
 function insertPriceStats(priceStats) {
-    const INSERT_SQL = "REPLACE INTO DAILY_STOCK_STATS (symbol, dt, start_dt, open, high, low, close, volume, prev_open, prev_high, prev_low, prev_close, prev_volume, roc020, roc125, rsi014, sma200, sma150, sma100, sma050, sma020, sma010, sma005, sma003, ema050, ema200, ema200pref, sma200pref, ema500pref, sma50pref, rsi14sctr, ppo01sctr, roc125sctr, histDay, chg_pct_1d, chg_pct_5d, chg_pct_10d, chg_pct_20d, chg_pct_50d, chg_pct_100d, sma10turnover, sma20turnover, sma50turnover, above_200d_sma ,above_150d_sma ,above_100d_sma ,above_50d_sma  ,above_20d_sma  ,above_10d_sma  ,above_5d_sma ) " +   
-                       "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    const INSERT_SQL = "REPLACE INTO DAILY_STOCK_STATS (symbol, dt, start_dt, open, high, low, close, volume, prev_open, prev_high, prev_low, prev_close, prev_volume, roc020, roc125, rsi014, sma200, sma150, sma100, sma050, sma020, sma010, sma005, sma003, ema050, ema200, ema200pref, sma200pref, ema500pref, sma50pref, rsi14sctr, ppo01sctr, roc125sctr, sctr, histDay, chg_pct_1d, chg_pct_5d, chg_pct_10d, chg_pct_20d, chg_pct_50d, chg_pct_100d, sma10turnover, sma20turnover, sma50turnover, above_200d_sma ,above_150d_sma ,above_100d_sma ,above_50d_sma  ,above_20d_sma  ,above_10d_sma  ,above_5d_sma ) " +   
+                       "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     const stmt = db.prepare(INSERT_SQL);
     const info = stmt.run(priceStats.symbol, priceStats.dt, priceStats.start_dt,
@@ -406,7 +420,7 @@ function insertPriceStats(priceStats) {
         priceStats.sma20, priceStats.sma10, priceStats.sma05, priceStats.sma03,
         priceStats.ema50, priceStats.ema200, priceStats.ema200pref, priceStats.sma200pref,
         priceStats.ema200pref, priceStats.sma50pref, priceStats.rsi14sctr, priceStats.ppo01sctr,
-        priceStats.roc125sctr, priceStats.histDay, priceStats.chg_pct_1d, priceStats.chg_pct_5d,
+        priceStats.roc125sctr, priceStats.sctr, priceStats.histDay, priceStats.chg_pct_1d, priceStats.chg_pct_5d,
         priceStats.chg_pct_10d, priceStats.chg_pct_20d, priceStats.chg_pct_50d, priceStats.chg_pct_100d,
         priceStats.sma10turnover, priceStats.sma20turnover, priceStats.sma50turnover, 
         priceStats.above_200d_sma, priceStats.above_150d_sma, priceStats.above_100d_sma,

@@ -1,93 +1,17 @@
 const fs = require("fs");
 const util = require("util");
+const path = require('path');
 const { parse } = require("csv-parse");
+const config = require('config');
 const helper = require("./helper");
-const db = require('better-sqlite3')('data/hkex-market-breadth.db', {});
+const mmutils = require('./mm-utils.js');
+const { resourceLimits } = require("worker_threads");
+const yahooFinance = require('yahoo-finance2').default; // NOTE the .default
+const db = require('better-sqlite3')(config.db.sqlite.file, {});
 db.pragma('journal_mode = WAL');
-// create table if not exist
-db.exec(`
-drop table if exists DAILY_STOCK_PRICE;  
-CREATE TABLE IF NOT EXISTS DAILY_STOCK_PRICE
-(
-  symbol           VARCHAR(10),
-  period           VARCHAR(1),
-  dt               VARCHAR(10),
-  tm               VARCHAR(6),
-  open             REAL,
-  high             REAL,
-  low              REAL,
-  close            REAL,
-  volume           REAL,
-  adj_close        REAL,
-  open_int         INTEGER
-);
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_daily_stock_price ON DAILY_STOCK_PRICE (symbol, dt);
-
-drop table if exists DAILY_STOCK_STATS; 
-CREATE TABLE IF NOT EXISTS DAILY_STOCK_STATS
-(
-  symbol           VARCHAR(10),
-  dt               VARCHAR(10),
-  start_dt         VARCHAR(10),
-  open             REAL,
-  high             REAL,
-  low              REAL,
-  close            REAL,
-  volume           REAL,
-  prev_open        REAL,
-  prev_high       REAL,
-  prev_low        REAL,
-  prev_close      REAL,
-  prev_volume      REAL,
-  roc020           REAL,  
-  roc125           REAL,
-  rsi014           REAL,
-  sma200           REAL,
-  sma150           REAL,
-  sma100           REAL,
-  sma050           REAL,
-  sma020           REAL,
-  sma010           REAL,
-  sma005           REAL,
-  sma003           REAL,
-  ema050           REAL,
-  ema200           REAL,
-  ema200pref       REAL,  
-  sma200pref       REAL,
-  ema500pref       REAL,
-  sma50pref        REAL,
-  rsi14sctr       REAL,
-  ppo01sctr       REAL,
-  roc125sctr     REAL,
-  histDay        REAL, 
-  chg_pct_1d    REAL, 
-  chg_pct_5d    REAL, 
-  chg_pct_10d   REAL,
-  chg_pct_20d   REAL,
-  chg_pct_50d   REAL,
-  chg_pct_100d  REAL,
-  sma10turnover REAL,
-  sma20turnover REAL,
-  sma50turnover REAL,
-  above_200d_sma REAL,
-  above_150d_sma REAL,
-  above_100d_sma REAL,
-  above_50d_sma  REAL,
-  above_20d_sma  REAL,
-  above_10d_sma  REAL,
-  above_5d_sma   REAL
-);
-
-CREATE UNIQUE INDEX IF NOT EXISTS idx_daily_stock_stats ON DAILY_STOCK_STATS (symbol, dt);
-
-`);
-
-const usPath = "C:/Users/user/Downloads/d_us_txt_20250522/data/daily/us";
-const hkPath = "C:/Users/user/Downloads/d_hk_txt_20250519/data/daily/hk/hkex stocks";
-const files = helper.traverseDirectory(hkPath);
-
-const start = async function() {
+const start = async function(extractionPath) {
+  const files = helper.traverseDirectory(extractionPath + config.file.path.load);
   const fileCount = await traverseDir(files);
   console.log("Total files processed: " + fileCount);
 
@@ -100,16 +24,54 @@ const start = async function() {
   db.close();
 }
 
-start();
-// db.close();
-// readDataFromCsv();
+const hkexDownload = async () => {
+  await mmutils.queryExcelView().then(async (data) => {
 
+    for (const item of data) {
+      const result = await yahooFinance.search(item.code, { region: 'HK' });
+      if (result && result.quotes && result.quotes.length > 0) {
+        item.name = result.quotes[0].shortName || item.name;
 
+        item.industry = ! helper.isEmpty(result.quotes[0].industry) ? result.quotes[0].industry.toUpperCase() : "UNKNOWN";
+        item.sector = ! helper.isEmpty(result.quotes[0].sector) ? result.quotes[0].sector.toUpperCase() : "UNKNOWN";
+      } else {
+        console.warn("No quote found for symbol: " + item.code);
+        item.industry = "UNKNOWN";
+        item.sector = "UNKNOWN";
+      }
+    }
 
+    await insertStockData(data);
+    console.log("HKEX data downloaded successfully. Total stocks inserted: " + data.length);
+  }).catch((error) => {
+    console.error("Error downloading HKEX data:", error);
+  });
+}
+
+hkexDownload();
+// start("C:/Users/user/Downloads/2025-05-25");
+
+/**
+ * Insert stock data into the STOCK table.
+ */
+async function insertStockData(stockData) {
+  const insert = db.prepare('REPLACE INTO STOCK (symbol,name,industry,sector) VALUES (@code,@name,@industry,@sector)');
+  const insertMany = db.transaction((stocks) => {
+    for (const stock of stocks) insert.run(stock);
+  });
+
+  insertMany(stockData);
+}
+
+/**
+ * Parse a CSV file and insert the data into the DAILY_STOCK_PRICE table.
+ * @param {*} filePath 
+ */
 async function parseAndInsertCsvData(filePath) {
   // console.log("Parsing CSV file: " + filePath);
-  const insert = db.prepare('INSERT INTO DAILY_STOCK_PRICE (symbol,period,dt,tm,open,high,low,close,volume,adj_close,open_int) VALUES (@symbol,@period,@dt,@tm,@open,@high,@low,@close,@volume,@adj_close,@open_int)');
-  const update = db.prepare('UPDATE DAILY_STOCK_PRICE SET period=@period,dt=@dt,tm=@tm,open=@open,high=@high,low=@low,close=@close,volume=@volume,adj_close=@adj_close,open_int=@open_int WHERE symbol=@symbol');
+  const insert = db.prepare(
+    'REPLACE INTO DAILY_STOCK_PRICE (symbol,period,dt,tm,open,high,low,close,volume,adj_close,open_int) ' +
+    'VALUES (@symbol,@period,@dt,@tm,@open,@high,@low,@close,@volume,@adj_close,@open_int)');
 
   const insertMany = db.transaction((stockPrices) => {
     for (const stockPrice of stockPrices) insert.run(stockPrice);

@@ -56,8 +56,14 @@ function isEmpty(value) {
     );
 }
 
+function todayString() {
+    const today = new Date();
+    return today.toISOString().split('T')[0]; // YYYY-MM-DD format
+}
+
 module.exports = {
     reformatSymbolForHK,
     traverseDirectory,
-    isEmpty
+    isEmpty,
+    todayString
 };
