@@ -142,3 +142,5 @@ dist
 *.db3
 *.db-shm
 *.db-wal
+.vercel
+.env*.local
