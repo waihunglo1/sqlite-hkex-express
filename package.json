@@ -7,7 +7,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node api/index.ts",
     "load": "node utils/loadData.js",
-    "process": "node utils/procData.js"
+    "process": "node --env-file=.env.local utils/procData.js",
+    "dev": "node --env-file=.env.local api/index.ts"
   },
   "keywords": [],
   "author": "",
@@ -24,6 +25,8 @@
     "extract-zip": "^2.0.1",
     "gulp": "^5.0.0",
     "path": "^0.12.7",
+    "postgrejs": "^2.22.4",
+    "postgres": "^3.4.7",
     "sqlite": "^5.1.1",
     "sqlite3": "^5.1.7",
     "stream-promise": "^3.2.0",

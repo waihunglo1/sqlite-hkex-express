@@ -5,6 +5,7 @@ const taIndicator = require('@debut/indicators');
 const { createTrend } = require('trendline');
 const helper = require("./helper");
 const config = require('config');
+const dbHelper = require('./dbConnHelper.js');
 
 const db = require('better-sqlite3')(config.db.sqlite.file, {});
 db.pragma('journal_mode = WAL');
@@ -16,6 +17,18 @@ const querySymbol = '';// = '9992.HK';
 console.log("Start processing data. file path: " + config.db.sqlite.file);
 helper.isEmpty(queryDate) ? queryProcessDates() : processSingleDate(queryDate, querySymbol);
 updateMarketStats();
+aivenDbUpdate();
+
+async function aivenDbUpdate() {
+      var version = await dbHelper.getAivenPgVersion();
+      console.log("Aiven Version: ", version);
+
+      const sqlMarketStats = 'select dt, up4pct1d, dn4pct1d, up25pctin100d, dn25pctin100d, up25pctin20d, dn25pctin20d, up50pctin20d, dn50pctin20d, noofstocks, above200smapct, above150smapct, above20smapct from daily_market_stats order by dt desc';
+      const marketStats = db.prepare(sqlMarketStats).all();
+      for (const marketStat of marketStats) {
+          await dbHelper.insertMarketStats(marketStat);
+      }
+}
 
 /**
  * Process all dates in the database
@@ -104,6 +117,8 @@ function updateMarketStats() {
             console.log("[ERROR] Inserted " + marketStat.dt);
         }
     });
+
+    console.log("Market stats updated. Total records: " + marketStats.length);
 }
 
 /**

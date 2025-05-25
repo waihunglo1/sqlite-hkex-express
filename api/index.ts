@@ -12,6 +12,9 @@ const urlencodedParser = bodyParser.urlencoded({ extended: false });
 
 app.use(express.static('public'));
 
+// Importing routes
+const healthCheckRouter = require('./routes/healthcheck');
+
 app.get('/', function (req, res) {
 	res.sendFile(path.join(__dirname, '..', 'components', 'home.htm'));
 });
@@ -106,6 +109,9 @@ app.get('/allUsers', async (req, res) => {
 		res.status(500).send('Error retrieving users');
 	}
 });
+
+// Health check route
+app.use('/api/v1/hc', healthCheckRouter);
 
 app.listen(3000, () => console.log('Server ready on port 3000.'));
 
