@@ -36,8 +36,9 @@ async function aivenDbUpdate() {
 
 async function aivenDbUpdateForDailyStockStats() {
     const sqlDailyStockStats = `
-        select * from DAILY_STOCK_STATS
-        where dt in (
+        select DAILY_STOCK_STATS.*, STOCK.sector, STOCK.industry from DAILY_STOCK_STATS, STOCK
+        where DAILY_STOCK_STATS.symbol = STOCK.symbol
+        and dt in (
             select dt from DAILY_STOCK_STATS
             group by dt
             order by dt DESC
