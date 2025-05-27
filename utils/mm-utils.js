@@ -25,7 +25,7 @@ const queryExcelView = async () => {
 const reformatData = (data) => {
     return data
         .filter(function (item) {
-            return item[2] && item[2].length > 0 && item[2].indexOf("股本") > -1;
+            return item[2] && item[2].length > 0 && (item[2].indexOf("股本") > -1 || item[2].indexOf("交易所買賣產品") > -1);
         })
         .map(item => {
             return {

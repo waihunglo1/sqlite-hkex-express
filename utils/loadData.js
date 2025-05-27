@@ -9,18 +9,27 @@ const yahooFinance = require('yahoo-finance2').default; // NOTE the .default
 const db = require('better-sqlite3')(config.db.sqlite.file, {});
 db.pragma('journal_mode = WAL');
 
-const row01 = db.prepare('SELECT sqlite_version()').get();
-console.log(row01);
+const start = async function (extractionPath) {
+  const pathToLoads = [config.file.path.load.dir1, config.file.path.load.dir2];
 
-const start = async function(extractionPath) {
-  const files = helper.traverseDirectory(extractionPath + config.file.path.load);
-  const fileCount = await traverseDir(files);
-  console.log("Total files processed: " + fileCount);
+  for (const pathToLoad of pathToLoads) {
+    const fullPath = path.join(extractionPath, pathToLoad);
+    if (!fs.existsSync(fullPath)) {
+      console.error("Directory does not exist: " + fullPath);
+      return;
+    } else {
+      console.log("Directory exists: " + fullPath);
+      const files = helper.traverseDirectory(fullPath);
+      const fileCount = await traverseDir(files);
+      console.log(fullPath + "Total files processed: " + fileCount);
+    }
+  }
 
   const row02 = db.prepare('SELECT COUNT(1) FROM DAILY_STOCK_PRICE').get();
   console.log(row02);
 
   db.close();
+
 }
 
 const hkexDownload = async () => {
@@ -50,8 +59,7 @@ const fillDataByYahooFinance = async (data) => {
   }
 }
 
-hkexDownload();
-// start("C:/Users/user/Downloads/2025-05-26");
+
 
 /**
  * Insert stock data into the STOCK table.
@@ -129,3 +137,13 @@ async function traverseDir(files) {
 
   return fileCount;
 }
+
+
+/**
+ * Main function to load data from HKEX and process it.
+ */
+const row01 = db.prepare('SELECT sqlite_version()').get();
+console.log(row01);
+
+hkexDownload();
+// start("C:/Users/user/Downloads/2025-05-26");

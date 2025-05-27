@@ -9,7 +9,10 @@ const config = {
             us: 'C:/Users/user/Downloads/d_us_txt.zip',
             hk: 'C:/Users/user/Downloads/d_hk_txt.zip',
             extract: 'c:/Users/user/Downloads',
-            load: '/data/daily/hk/hkex stocks'
+            load: {
+                dir1 : '/data/daily/hk/hkex stocks',
+                dir2 : '/data/daily/hk/hkex etfs'
+            }
         } 
     },
     hkex: {
