@@ -72,7 +72,9 @@ CREATE TABLE IF NOT EXISTS DAILY_STOCK_STATS
   above_10d_sma  REAL,
   above_5d_sma   REAL,
   industry         VARCHAR(50),
-  sector           VARCHAR(50)
+  sector           VARCHAR(50),
+  short_name       VARCHAR(100),
+  market_cap       REAL
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_daily_stock_stats ON DAILY_STOCK_STATS (symbol, dt);

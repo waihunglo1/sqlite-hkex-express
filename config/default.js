@@ -13,7 +13,7 @@ const config = {
         } 
     },
     hkex: {
-        url: 'https://www.hkex.com.hk/eng/services/trading/securities/securitieslists/ListOfSecurities.xlsx'
+        url: 'https://www.hkex.com.hk/chi/services/trading/securities/securitieslists/ListOfSecurities_c.xlsx'
     }
 };
 

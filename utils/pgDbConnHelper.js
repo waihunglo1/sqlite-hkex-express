@@ -41,8 +41,20 @@ async function insertDailyStockStats(dailyStockStat) {
     sctr, histDay, chg_pct_1d, chg_pct_5d, chg_pct_10d, chg_pct_20d, chg_pct_50d, chg_pct_100d, 
     sma10turnover, sma20turnover, sma50turnover, 
     above_200d_sma ,above_150d_sma ,above_100d_sma ,above_50d_sma  ,above_20d_sma  ,above_10d_sma  ,above_5d_sma,
-    industry, sector)
-    VALUES (${dailyStockStat.symbol}, ${dailyStockStat.dt}, ${dailyStockStat.start_dt}, ${dailyStockStat.open}, ${dailyStockStat.high}, ${dailyStockStat.low}, ${dailyStockStat.close}, ${dailyStockStat.volume}, ${dailyStockStat.prev_open}, ${dailyStockStat.prev_high}, ${dailyStockStat.prev_low}, ${dailyStockStat.prev_close}, ${dailyStockStat.prev_volume}, ${dailyStockStat.roc020}, ${dailyStockStat.roc125}, ${dailyStockStat.rsi014}, ${dailyStockStat.sma200}, ${dailyStockStat.sma150}, ${dailyStockStat.sma100}, ${dailyStockStat.sma050}, ${dailyStockStat.sma020}, ${dailyStockStat.sma010}, ${dailyStockStat.sma005}, ${dailyStockStat.sma003}, ${dailyStockStat.ema050}, ${dailyStockStat.ema200}, ${dailyStockStat.ema200pref}, ${dailyStockStat.sma200pref}, ${dailyStockStat.ema500pref}, ${dailyStockStat.sma50pref}, ${dailyStockStat.rsi14sctr}, ${dailyStockStat.ppo01sctr}, ${dailyStockStat.roc125sctr}, ${dailyStockStat.sctr}, ${dailyStockStat.histDay}, ${dailyStockStat.chg_pct_1d}, ${dailyStockStat.chg_pct_5d}, ${dailyStockStat.chg_pct_10d}, ${dailyStockStat.chg_pct_20d}, ${dailyStockStat.chg_pct_50d}, ${dailyStockStat.chg_pct_100d}, ${dailyStockStat.sma10turnover}, ${dailyStockStat.sma20turnover}, ${dailyStockStat.sma50turnover}, ${dailyStockStat.above_200d_sma}, ${dailyStockStat.above_150d_sma}, ${dailyStockStat.above_100d_sma}, ${dailyStockStat.above_50d_sma}, ${dailyStockStat.above_20d_sma}, ${dailyStockStat.above_10d_sma}, ${dailyStockStat.above_5d_sma}, ${dailyStockStat.industry}, ${dailyStockStat.sector})
+    industry, sector, short_name)
+    VALUES (${dailyStockStat.symbol}, ${dailyStockStat.dt}, ${dailyStockStat.start_dt}, ${dailyStockStat.open}, 
+    ${dailyStockStat.high}, ${dailyStockStat.low}, ${dailyStockStat.close}, ${dailyStockStat.volume}, ${dailyStockStat.prev_open}, 
+    ${dailyStockStat.prev_high}, ${dailyStockStat.prev_low}, ${dailyStockStat.prev_close}, ${dailyStockStat.prev_volume}, 
+    ${dailyStockStat.roc020}, ${dailyStockStat.roc125}, ${dailyStockStat.rsi014}, ${dailyStockStat.sma200}, ${dailyStockStat.sma150}, 
+    ${dailyStockStat.sma100}, ${dailyStockStat.sma050}, ${dailyStockStat.sma020}, ${dailyStockStat.sma010}, ${dailyStockStat.sma005}, 
+    ${dailyStockStat.sma003}, ${dailyStockStat.ema050}, ${dailyStockStat.ema200}, ${dailyStockStat.ema200pref}, ${dailyStockStat.sma200pref}, 
+    ${dailyStockStat.ema500pref}, ${dailyStockStat.sma50pref}, ${dailyStockStat.rsi14sctr}, ${dailyStockStat.ppo01sctr}, 
+    ${dailyStockStat.roc125sctr}, ${dailyStockStat.sctr}, ${dailyStockStat.histDay}, ${dailyStockStat.chg_pct_1d}, 
+    ${dailyStockStat.chg_pct_5d}, ${dailyStockStat.chg_pct_10d}, ${dailyStockStat.chg_pct_20d}, ${dailyStockStat.chg_pct_50d}, 
+    ${dailyStockStat.chg_pct_100d}, ${dailyStockStat.sma10turnover}, ${dailyStockStat.sma20turnover}, ${dailyStockStat.sma50turnover}, 
+    ${dailyStockStat.above_200d_sma}, ${dailyStockStat.above_150d_sma}, ${dailyStockStat.above_100d_sma}, ${dailyStockStat.above_50d_sma}, 
+    ${dailyStockStat.above_20d_sma}, ${dailyStockStat.above_10d_sma}, ${dailyStockStat.above_5d_sma}, ${dailyStockStat.industry}, 
+    ${dailyStockStat.sector}, ${dailyStockStat.short_name})
     RETURNING *;
   `;
 
