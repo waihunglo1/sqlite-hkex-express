@@ -2,10 +2,10 @@ const taIndicator = require('@debut/indicators');
 const { createTrend } = require('trendline');
 const helper = require("./helper");
 const config = require('config');
-const dbHelper = require('./pgDbConnHelper.js');
+const avienDbHelper = require('./pgDbConnHelper.js');
 
-const db = require('better-sqlite3')(config.db.sqlite.file, {});
-db.pragma('journal_mode = WAL');
+const sqliteDb = require('better-sqlite3')(config.db.sqlite.file, {});
+sqliteDb.pragma('journal_mode = WAL');
 
 const queryDate = ''; //20250516
 const querySymbol = '';// = '9992.HK';
@@ -20,15 +20,15 @@ aivenDbUpdateForDailyStockStats();
 console.log("Data processing completed.");
 
 async function aivenDbUpdate() {
-    var version = await dbHelper.getAivenPgVersion();
+    var version = await avienDbHelper.getAivenPgVersion();
     console.log("Aiven Version: ", version);
 
     const sqlMarketStats =
         `select dt, up4pct1d, dn4pct1d, up25pctin100d, dn25pctin100d, up25pctin20d, dn25pctin20d, up50pctin20d, dn50pctin20d, 
          noofstocks, above200smapct, above150smapct, above20smapct 
          from daily_market_stats order by dt desc`;
-    const marketStats = db.prepare(sqlMarketStats).all();
-    await dbHelper.updateMarketStats(marketStats);
+    const marketStats = sqliteDb.prepare(sqlMarketStats).all();
+    await avienDbHelper.updateMarketStats(marketStats);
 
     console.log("Aiven market stats updated. Total records: " + marketStats.length);
     console.log("Aiven db update completed.");
@@ -46,10 +46,10 @@ async function aivenDbUpdateForDailyStockStats() {
         )
         order by dt DESC`;
 
-    const dailyStockStats = db.prepare(sqlDailyStockStats).all();
+    const dailyStockStats = sqliteDb.prepare(sqlDailyStockStats).all();
     console.log("Aiven daily stock stats: ", dailyStockStats.length);
 
-    dbHelper.updateDailyStockStats(dailyStockStats);
+    avienDbHelper.updateDailyStockStats(dailyStockStats);
     console.log("Aiven daily stock stats updated. Total records: " + dailyStockStats.length);
     console.log("Aiven db update for daily stock stats completed.");
 }
@@ -69,7 +69,7 @@ function queryProcessDates() {
         "except " +
         "select dt from daily_market_stats";
 
-    const dateStmt = db.prepare(sqlDateStr);
+    const dateStmt = sqliteDb.prepare(sqlDateStr);
     const dates = dateStmt.all();
     if (dates.length > 0) { 
         dates.forEach((date) => {
@@ -97,7 +97,7 @@ function processSingleDate(queryDate, querySymbol) {
     }
 
     // query db
-    const stmt = db.prepare(sqlSymbolByDateStr);
+    const stmt = sqliteDb.prepare(sqlSymbolByDateStr);
     const symbols = helper.isEmpty(querySymbol) ? stmt.all(queryDate) : stmt.all(queryDate, querySymbol);
 
     for (const symbol of symbols) {
@@ -129,12 +129,12 @@ function updateMarketStats() {
         'from DAILY_STOCK_STATS ' +
         'group by dt ' +
         'order by dt desc ';
-    const stmt = db.prepare(sqlMarketStats);
+    const stmt = sqliteDb.prepare(sqlMarketStats);
     const marketStats = stmt.all();
     
     const INSERT_SQL = "REPLACE INTO DAILY_MARKET_STATS (dt, up4pct1d, dn4pct1d, up25pctin100d, dn25pctin100d, up25pctin20d, dn25pctin20d, up50pctin20d, dn50pctin20d, noofstocks, above200smapct, above150smapct, above20smapct) " +
         "VALUES (?,?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-    const stmtInsert = db.prepare(INSERT_SQL);
+    const stmtInsert = sqliteDb.prepare(INSERT_SQL);
     marketStats.forEach((marketStat) => {
         const info = stmtInsert.run(marketStat.dt, marketStat.up4pct1d, marketStat.dn4pct1d, marketStat.up25pctin100d, marketStat.dn25pctin100d, marketStat.up25pctin20d, marketStat.dn25pctin20d, marketStat.up50pctin20d, marketStat.dn50pctin20d, marketStat.noofstocks, marketStat.above200smapct, marketStat.above150smapct, marketStat.above20smapct);
         if (info.changes <= 0) {
@@ -152,7 +152,7 @@ function updateMarketStats() {
  * @returns 
  */
 function calculateStatistics(stockPrice, queryDate) {
-    const stmt = db.prepare('SELECT * FROM DAILY_STOCK_PRICE where symbol = ? and dt <= ? order by dt desc limit 200');
+    const stmt = sqliteDb.prepare('SELECT * FROM DAILY_STOCK_PRICE where symbol = ? and dt <= ? order by dt desc limit 200');
     const priceHistory = stmt.all(stockPrice.symbol, queryDate);
 
     var calculators = {
@@ -450,7 +450,7 @@ function insertPriceStats(priceStats) {
     const INSERT_SQL = "REPLACE INTO DAILY_STOCK_STATS (symbol, dt, start_dt, open, high, low, close, volume, prev_open, prev_high, prev_low, prev_close, prev_volume, roc020, roc125, rsi014, sma200, sma150, sma100, sma050, sma020, sma010, sma005, sma003, ema050, ema200, ema200pref, sma200pref, ema500pref, sma50pref, rsi14sctr, ppo01sctr, roc125sctr, sctr, histDay, chg_pct_1d, chg_pct_5d, chg_pct_10d, chg_pct_20d, chg_pct_50d, chg_pct_100d, sma10turnover, sma20turnover, sma50turnover, above_200d_sma ,above_150d_sma ,above_100d_sma ,above_50d_sma  ,above_20d_sma  ,above_10d_sma  ,above_5d_sma ) " +   
                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
-    const stmt = db.prepare(INSERT_SQL);
+    const stmt = sqliteDb.prepare(INSERT_SQL);
     const info = stmt.run(priceStats.symbol, priceStats.dt, priceStats.start_dt,
         priceStats.open, priceStats.high, priceStats.low, priceStats.close, priceStats.volume,
         priceStats.prev_open, priceStats.prev_high, priceStats.prev_low, priceStats.prev_close,

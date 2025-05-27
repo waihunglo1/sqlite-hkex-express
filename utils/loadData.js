@@ -6,14 +6,23 @@ const config = require('config');
 const helper = require("./helper");
 const mmutils = require('./mm-utils.js');
 const yahooFinance = require('yahoo-finance2').default; // NOTE the .default
-const db = require('better-sqlite3')(config.db.sqlite.file, {});
-db.pragma('journal_mode = WAL');
+const sqliteDb = require('better-sqlite3')(config.db.sqlite.file, {});
+sqliteDb.pragma('journal_mode = WAL');
 
-const start = async function (extractionPath) {
+const start = async function () {
+  const zipFullPath = path.join(config.file.path.extract, helper.todayString());
+  if (!fs.existsSync(zipFullPath)) {
+    console.info("Extraction path does not exist: " + zipFullPath);
+    unzipFiles(zipFullPath);
+  } else {  
+    console.info("Extraction path exists: " + zipFullPath);
+    const stat = fs.statSync(zipFullPath);  
+  }
+
   const pathToLoads = [config.file.path.load.dir1, config.file.path.load.dir2];
 
   for (const pathToLoad of pathToLoads) {
-    const fullPath = path.join(extractionPath, pathToLoad);
+    const fullPath = path.join(zipFullPath, pathToLoad);
     if (!fs.existsSync(fullPath)) {
       console.error("Directory does not exist: " + fullPath);
       return;
@@ -25,11 +34,10 @@ const start = async function (extractionPath) {
     }
   }
 
-  const row02 = db.prepare('SELECT COUNT(1) FROM DAILY_STOCK_PRICE').get();
+  const row02 = sqliteDb.prepare('SELECT COUNT(1) FROM DAILY_STOCK_PRICE').get();
   console.log(row02);
 
-  db.close();
-
+  sqliteDb.close();
 }
 
 const hkexDownload = async () => {
@@ -65,8 +73,8 @@ const fillDataByYahooFinance = async (data) => {
  * Insert stock data into the STOCK table.
  */
 async function insertStockData(stocks) {
-  const insert = db.prepare('REPLACE INTO STOCK (symbol,name,industry,sector) VALUES (@code,@name,@industry,@sector)');
-  const insertMany = db.transaction((stocks) => {
+  const insert = sqliteDb.prepare('REPLACE INTO STOCK (symbol,name,industry,sector) VALUES (@code,@name,@industry,@sector)');
+  const insertMany = sqliteDb.transaction((stocks) => {
     for (const stock of stocks) insert.run(stock);
   });
 
@@ -79,11 +87,11 @@ async function insertStockData(stocks) {
  */
 async function parseAndInsertCsvData(filePath) {
   // console.log("Parsing CSV file: " + filePath);
-  const insert = db.prepare(
+  const insert = sqliteDb.prepare(
     'REPLACE INTO DAILY_STOCK_PRICE (symbol,period,dt,tm,open,high,low,close,volume,adj_close,open_int) ' +
     'VALUES (@symbol,@period,@dt,@tm,@open,@high,@low,@close,@volume,@adj_close,@open_int)');
 
-  const insertMany = db.transaction((stockPrices) => {
+  const insertMany = sqliteDb.transaction((stockPrices) => {
     for (const stockPrice of stockPrices) insert.run(stockPrice);
   });
 
@@ -138,12 +146,22 @@ async function traverseDir(files) {
   return fileCount;
 }
 
+function unzipFiles(fullPath) {
+  helper.unzipFile(config.file.path.hk, fullPath)
+    .then(() => {
+      console.log("HK files unzipped successfully. " + fullPath);
+    })
+    .catch((error) => {
+      console.error("Error unzipping HK files:", error);
+    }); 
+}
 
 /**
  * Main function to load data from HKEX and process it.
  */
-const row01 = db.prepare('SELECT sqlite_version()').get();
+const row01 = sqliteDb.prepare('SELECT sqlite_version()').get();
 console.log(row01);
 
-hkexDownload();
-// start("C:/Users/user/Downloads/2025-05-26");
+
+// hkexDownload();
+start();

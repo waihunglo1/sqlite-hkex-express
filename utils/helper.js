@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const util = require('util');
+const extract = require('extract-zip')
 
 const reformatSymbolForHK = (symbol) => {
     const index = symbol.search(/.HK$/);
@@ -61,9 +62,14 @@ function todayString() {
     return today.toISOString().split('T')[0]; // YYYY-MM-DD format
 }
 
+async function unzipFile(path, outputDir) {
+    await extract(path, { dir: outputDir })
+}
+
 module.exports = {
     reformatSymbolForHK,
     traverseDirectory,
     isEmpty,
-    todayString
+    todayString,
+    unzipFile
 };
