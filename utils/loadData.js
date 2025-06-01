@@ -34,7 +34,7 @@ const start = async function () {
     }
   }
 
-  const row02 = sqliteDb.prepare('SELECT COUNT(1) FROM DAILY_STOCK_PRICE').get();
+  const row02 = sqliteDb.prepare('SELECT max(dt), min(dt), COUNT(1) FROM DAILY_STOCK_PRICE').get();
   console.log(row02);
 
   sqliteDb.close();
@@ -162,6 +162,5 @@ function unzipFiles(fullPath) {
 const row01 = sqliteDb.prepare('SELECT sqlite_version()').get();
 console.log(row01);
 
-
-// hkexDownload();
+hkexDownload();
 start();
