@@ -17,8 +17,11 @@ const start = async function () {
   } else {  
     console.info("Extraction path exists: " + zipFullPath);
     const stat = fs.statSync(zipFullPath);  
+    traverseDirAndInsertData(zipFullPath);
   }
+}
 
+const traverseDirAndInsertData = async (zipFullPath) => {
   const pathToLoads = [config.file.path.load.dir1, config.file.path.load.dir2];
 
   for (const pathToLoad of pathToLoads) {
@@ -39,6 +42,7 @@ const start = async function () {
 
   sqliteDb.close();
 }
+
 
 const hkexDownload = async () => {
   await mmutils.queryExcelView().then(async (data) => {
@@ -150,6 +154,7 @@ function unzipFiles(fullPath) {
   helper.unzipFile(config.file.path.hk, fullPath)
     .then(() => {
       console.log("HK files unzipped successfully. " + fullPath);
+      traverseDirAndInsertData(fullPath);
     })
     .catch((error) => {
       console.error("Error unzipping HK files:", error);
