@@ -9,7 +9,7 @@ const yahooFinance = require('yahoo-finance2').default; // NOTE the .default
 const sqliteDb = require('better-sqlite3')(config.db.sqlite.file, {});
 sqliteDb.pragma('journal_mode = WAL');
 
-const start = async function () {
+const loadData = async function () {
   const zipFullPath = path.join(config.file.path.extract, helper.todayString());
   if (!fs.existsSync(zipFullPath)) {
     console.info("Extraction path does not exist: " + zipFullPath);
@@ -167,5 +167,9 @@ function unzipFiles(fullPath) {
 const row01 = sqliteDb.prepare('SELECT sqlite_version()').get();
 console.log(row01);
 
-hkexDownload();
-start();
+hkexDownload().then(() => {
+  console.log("HKEX data download and processing completed.");
+  loadData();
+}).catch((error) => {
+  console.error("Error during HKEX data download and processing:", error);
+});
