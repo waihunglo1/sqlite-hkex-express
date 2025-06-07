@@ -12,7 +12,9 @@ CREATE TABLE IF NOT EXISTS DAILY_MARKET_STATS
   noofstocks int,
   above200smapct real,
   above150smapct real,
-  above20smapct real
+  above20smapct real,
+  hsi real,
+  hsce real
 )
 ;
 

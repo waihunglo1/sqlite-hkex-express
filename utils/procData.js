@@ -55,7 +55,7 @@ async function aivenDbUpdate() {
 
     const sqlMarketStats =
         `select dt, up4pct1d, dn4pct1d, up25pctin100d, dn25pctin100d, up25pctin20d, dn25pctin20d, up50pctin20d, dn50pctin20d, 
-         noofstocks, above200smapct, above150smapct, above20smapct 
+         noofstocks, above200smapct, above150smapct, above20smapct, hsi, hsce 
          from daily_market_stats order by dt desc`;
     const marketStats = sqliteDb.prepare(sqlMarketStats).all();
     await avienDbHelper.updateMarketStats(marketStats);
@@ -128,15 +128,15 @@ function fillHistoricalSCTR(dailyStat) {
  */
 function sqliteProcessMultipleDates() {
     // query db
-    const sqlDateStr =
-        "select dt from ( " +
-        "SELECT dt FROM DAILY_STOCK_PRICE " +
-        "group by dt " +
-        "order by dt desc " +
-        "limit 200 " +
-        ") " +
-        "except " +
-        "select dt from daily_market_stats";
+    const sqlDateStr = `
+        select dt from ( 
+            SELECT dt FROM DAILY_STOCK_PRICE 
+            group by dt 
+            order by dt desc 
+            limit 200 
+        ) 
+        except 
+        select dt from daily_market_stats`;
 
     const dateStmt = sqliteDb.prepare(sqlDateStr);
     const dates = dateStmt.all();
@@ -156,10 +156,10 @@ function sqliteProcessMultipleDates() {
 function sqliteProcessSingleDate(queryDate, querySymbol) {
     // format sql
     var count = 0;
-    var sqlSymbolByDateStr =
-      "SELECT DAILY_STOCK_PRICE.symbol FROM DAILY_STOCK_PRICE, stock " +
-      "WHERE DAILY_STOCK_PRICE.dt = ? " +  
-      "AND DAILY_STOCK_PRICE.symbol = stock.symbol ";
+    var sqlSymbolByDateStr = `
+      SELECT DAILY_STOCK_PRICE.symbol FROM DAILY_STOCK_PRICE, STOCK 
+      WHERE DAILY_STOCK_PRICE.dt = ? 
+      AND DAILY_STOCK_PRICE.symbol = stock.symbol`;
 
     if (!helper.isEmpty(querySymbol)) {
         sqlSymbolByDateStr = sqlSymbolByDateStr + ' and symbol = ?';
@@ -182,30 +182,48 @@ function sqliteProcessSingleDate(queryDate, querySymbol) {
  * update market stats
  */
 function sqliteLocalUpdateMarketStats() {
-    const sqlMarketStats = 'select dt, ' +
-        'sum(case when chg_pct_1d >= 4 then 1 else 0 end)  up4pct1d, ' +
-        'sum(case when chg_pct_1d<= -4 then 1 else 0 end)  dn4pct1d, ' +
-        'sum(case when chg_pct_100d >= 25 then 1 else 0 end)  up25pctin100d, ' +
-        'sum(case when chg_pct_100d<= -25 then 1 else 0 end)  dn25pctin100d, ' +
-        'sum(case when chg_pct_20d >= 25 then 1 else 0 end)  up25pctin20d, ' +
-        'sum(case when chg_pct_20d<= -25 then 1 else 0 end)  dn25pctin20d, ' +
-        'sum(case when chg_pct_20d >= 50 then 1 else 0 end)  up50pctin20d, ' +
-        'sum(case when chg_pct_20d<= -50 then 1 else 0 end)  dn50pctin20d, ' +
-        'count(1) noofstocks, ' +
-        'round(sum(above_200d_sma) / count(1) * 100,2) above200smapct, ' +
-        'round(sum(above_150d_sma) / count(1) * 100,2) above150smapct, ' +
-        'round(sum(above_20d_sma) / count(1) * 100,2) above20smapct ' +
-        'from DAILY_STOCK_STATS ' +
-        'group by dt ' +
-        'order by dt desc ';
+    const sqlMarketStats = 
+    `select DAILY_STOCK_STATS.dt, 
+        sum(case when chg_pct_1d >= 4 then 1 else 0 end)  up4pct1d, 
+        sum(case when chg_pct_1d<= -4 then 1 else 0 end)  dn4pct1d, 
+        sum(case when chg_pct_100d >= 25 then 1 else 0 end)  up25pctin100d, 
+        sum(case when chg_pct_100d<= -25 then 1 else 0 end)  dn25pctin100d, 
+        sum(case when chg_pct_20d >= 25 then 1 else 0 end)  up25pctin20d, 
+        sum(case when chg_pct_20d<= -25 then 1 else 0 end)  dn25pctin20d, 
+        sum(case when chg_pct_20d >= 50 then 1 else 0 end)  up50pctin20d, 
+        sum(case when chg_pct_20d<= -50 then 1 else 0 end)  dn50pctin20d, 
+        count(1) noofstocks, 
+        round(sum(above_200d_sma) / count(1) * 100,2) above200smapct, 
+        round(sum(above_150d_sma) / count(1) * 100,2) above150smapct, 
+        round(sum(above_20d_sma) / count(1) * 100,2) above20smapct,
+        hsi, hsce 
+        from DAILY_STOCK_STATS 
+        left outer join 
+        (
+            select dt, close as hsi from daily_stock_price
+            where symbol = '^HSI'
+        ) HSI on DAILY_STOCK_STATS.dt = HSI.dt
+        left outer join 
+        (
+            select dt, close as hsce from daily_stock_price
+            where symbol = '^HSCE'
+        ) HSCE on DAILY_STOCK_STATS.dt = HSCE.dt        
+        group by DAILY_STOCK_STATS.dt 
+        order by DAILY_STOCK_STATS.dt desc`;
+
     const stmt = sqliteDb.prepare(sqlMarketStats);
     const marketStats = stmt.all();
     
-    const INSERT_SQL = "REPLACE INTO DAILY_MARKET_STATS (dt, up4pct1d, dn4pct1d, up25pctin100d, dn25pctin100d, up25pctin20d, dn25pctin20d, up50pctin20d, dn50pctin20d, noofstocks, above200smapct, above150smapct, above20smapct) " +
-        "VALUES (?,?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    const INSERT_SQL = 
+      `REPLACE INTO DAILY_MARKET_STATS 
+      (dt, up4pct1d, dn4pct1d, up25pctin100d, dn25pctin100d, up25pctin20d, dn25pctin20d, 
+      up50pctin20d, dn50pctin20d, noofstocks, above200smapct, above150smapct, above20smapct, hsi, hsce) 
+      VALUES (?,?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     const stmtInsert = sqliteDb.prepare(INSERT_SQL);
     marketStats.forEach((marketStat) => {
-        const info = stmtInsert.run(marketStat.dt, marketStat.up4pct1d, marketStat.dn4pct1d, marketStat.up25pctin100d, marketStat.dn25pctin100d, marketStat.up25pctin20d, marketStat.dn25pctin20d, marketStat.up50pctin20d, marketStat.dn50pctin20d, marketStat.noofstocks, marketStat.above200smapct, marketStat.above150smapct, marketStat.above20smapct);
+        const info = stmtInsert.run(marketStat.dt, marketStat.up4pct1d, marketStat.dn4pct1d, marketStat.up25pctin100d, marketStat.dn25pctin100d, 
+            marketStat.up25pctin20d, marketStat.dn25pctin20d, marketStat.up50pctin20d, marketStat.dn50pctin20d, marketStat.noofstocks, 
+            marketStat.above200smapct, marketStat.above150smapct, marketStat.above20smapct, marketStat.hsi, marketStat.hsce);
         if (info.changes <= 0) {
             console.log("[ERROR] Inserted " + marketStat.dt);
         }
@@ -516,8 +534,15 @@ function calculatePPO01(priceStats) {
  * @param {*} priceStats 
  */
 function insertPriceStats(priceStats) {
-    const INSERT_SQL = "REPLACE INTO DAILY_STOCK_STATS (symbol, dt, start_dt, open, high, low, close, volume, prev_open, prev_high, prev_low, prev_close, prev_volume, roc020, roc125, rsi014, sma200, sma150, sma100, sma050, sma020, sma010, sma005, sma003, ema050, ema200, ema200pref, sma200pref, ema500pref, sma50pref, rsi14sctr, ppo01sctr, roc125sctr, sctr, histDay, chg_pct_1d, chg_pct_5d, chg_pct_10d, chg_pct_20d, chg_pct_50d, chg_pct_100d, sma10turnover, sma20turnover, sma50turnover, above_200d_sma ,above_150d_sma ,above_100d_sma ,above_50d_sma  ,above_20d_sma  ,above_10d_sma  ,above_5d_sma ) " +   
-                       "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    const INSERT_SQL = `
+      REPLACE INTO DAILY_STOCK_STATS 
+      (symbol, dt, start_dt, open, high, low, close, volume, 
+      prev_open, prev_high, prev_low, prev_close, prev_volume, 
+      roc020, roc125, rsi014, sma200, sma150, sma100, sma050, sma020, sma010, sma005, sma003, 
+      ema050, ema200, ema200pref, sma200pref, ema500pref, sma50pref, rsi14sctr, ppo01sctr, roc125sctr, sctr, 
+      histDay, chg_pct_1d, chg_pct_5d, chg_pct_10d, chg_pct_20d, chg_pct_50d, chg_pct_100d, sma10turnover, 
+      sma20turnover, sma50turnover, above_200d_sma ,above_150d_sma ,above_100d_sma ,above_50d_sma, above_20d_sma  ,above_10d_sma  ,above_5d_sma)   
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
     const stmt = sqliteDb.prepare(INSERT_SQL);
     const info = stmt.run(priceStats.symbol, priceStats.dt, priceStats.start_dt,
