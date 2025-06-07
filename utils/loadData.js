@@ -9,6 +9,10 @@ const yahooFinance = require('yahoo-finance2').default; // NOTE the .default
 const sqliteDb = require('better-sqlite3')(config.db.sqlite.file, {});
 sqliteDb.pragma('journal_mode = WAL');
 
+/**
+ * Load data from HKEX and process it.
+ * This function checks if the extraction path exists, and if not, it unzips the files.
+ */
 const loadData = async function () {
   const zipFullPath = path.join(config.file.path.extract, helper.todayString());
   if (!fs.existsSync(zipFullPath)) {
@@ -21,6 +25,11 @@ const loadData = async function () {
   }
 }
 
+/**
+ * Traverse the directory and insert data into the database.
+ * @param {*} zipFullPath 
+ * @returns 
+ */
 const traverseDirAndInsertData = async (zipFullPath) => {
   const pathToLoads = [config.file.path.load.dir1, config.file.path.load.dir2];
 
@@ -33,7 +42,7 @@ const traverseDirAndInsertData = async (zipFullPath) => {
       console.log("Directory exists: " + fullPath);
       const files = helper.traverseDirectory(fullPath);
       const fileCount = await traverseDir(files);
-      console.log(fullPath + "Total files processed: " + fileCount);
+      console.log("Total files processed: " + fileCount + " in " + fullPath);
     }
   }
 
@@ -43,7 +52,10 @@ const traverseDirAndInsertData = async (zipFullPath) => {
   sqliteDb.close();
 }
 
-
+/**
+ * Download HKEX data and fill it with Yahoo Finance data.
+ * This function queries the HKEX data, fills it with additional information from Yahoo Finance,
+ */
 const hkexDownload = async () => {
   await mmutils.queryExcelView().then(async (data) => {
     await fillDataByYahooFinance(data);
@@ -54,6 +66,10 @@ const hkexDownload = async () => {
   });
 }
 
+/**
+ * Fill missing data in the HKEX dataset using Yahoo Finance API.
+ * @param {*} data 
+ */
 const fillDataByYahooFinance = async (data) => {
   var count = 0;
   for (const item of data) {
@@ -70,8 +86,6 @@ const fillDataByYahooFinance = async (data) => {
     }
   }
 }
-
-
 
 /**
  * Insert stock data into the STOCK table.
@@ -135,6 +149,11 @@ async function parseAndInsertCsvData(filePath) {
     });
 }
 
+/**
+ * Traverse the directory and insert data into the database.
+ * @param {*} files 
+ * @returns 
+ */
 async function traverseDir(files) {
   var fileCount = 0;
   for (const file of files) {
@@ -150,6 +169,10 @@ async function traverseDir(files) {
   return fileCount;
 }
 
+/**
+ * Unzip HKEX files.
+ * @param {*} fullPath 
+ */
 function unzipFiles(fullPath) {
   helper.unzipFile(config.file.path.hk, fullPath)
     .then(() => {

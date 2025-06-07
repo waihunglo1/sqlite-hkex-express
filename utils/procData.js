@@ -10,14 +10,44 @@ sqliteDb.pragma('journal_mode = WAL');
 const queryDate = ''; //20250516
 const querySymbol = '';// = '9992.HK';
 
-// process data by dates
-console.log("Start processing data. file path: " + config.db.sqlite.file);
-helper.isEmpty(queryDate) ? queryProcessDates() : processSingleDate(queryDate, querySymbol);
-updateMarketStats();
-aivenDbUpdate();
-aivenDbUpdateForDailyStockStats();
+/**
+ * Main entry point for processing data
+ * This function initializes the process by checking if a specific date or symbol is provided.
+ */
+processDataLocal();
+populateStatisticsToAvien();
 
-console.log("Data processing completed.");
+/**
+ * Main function to process data
+ */
+function processDataLocal() {
+    // process data by dates
+    console.log("Start processing data. file path: " + config.db.sqlite.file);
+    helper.isEmpty(queryDate) ? sqliteProcessMultipleDates() : sqliteProcessSingleDate(queryDate, querySymbol);
+    sqliteLocalUpdateMarketStats();
+    console.log("Completed processing data. file path: " + config.db.sqlite.file);
+}
+
+/**
+ * Populate statistics into Aiven database
+ */
+function populateStatisticsToAvien() {
+    // populate statistics Aiven database
+    console.log("Start updating Aiven database.");
+    aivenDbUpdate().then(() => {
+        console.log("Aiven database update completed.");
+        aivenDbUpdateForDailyStockStats().then(() => {
+            console.log("Aiven database update for daily stock stats completed.");
+            sqliteDb.close();
+            console.log("Data population completed.");
+        }).catch((error) => {
+            console.error("Error updating Aiven daily stock stats:", error);
+        });
+    }).catch((error) => {
+        console.error("Error updating Aiven database:", error);
+    });
+}
+
 
 async function aivenDbUpdate() {
     var version = await avienDbHelper.getAivenPgVersion();
@@ -49,15 +79,54 @@ async function aivenDbUpdateForDailyStockStats() {
     const dailyStockStats = sqliteDb.prepare(sqlDailyStockStats).all();
     console.log("Aiven daily stock stats: ", dailyStockStats.length);
 
+    for(const dailyStat of dailyStockStats) {
+        fillHistoricalSCTR(dailyStat);
+    }
+
     avienDbHelper.updateDailyStockStats(dailyStockStats);
     console.log("Aiven daily stock stats updated. Total records: " + dailyStockStats.length);
     console.log("Aiven db update for daily stock stats completed.");
 }
 
+function fillHistoricalSCTR(dailyStat) {
+    // long term indicator weighting
+    const sqlSCTR = `select sctr from DAILY_STOCK_STATS where symbol = ? order by dt desc limit 20`;
+    const sctr = sqliteDb.prepare(sqlSCTR).all(dailyStat.symbol);
+
+    if (sctr.length < 20) {
+        console.log("Not enough SCTR data for " + dailyStat.symbol + ". Only " + sctr.length + " records found.");
+        // Fill with zeros if not enough data
+        for (let i = sctr.length; i < 20; i++) {
+            sctr.push({ sctr: 0 });
+        }
+    }
+
+    dailyStat.sctr1 = sctr.shift().sctr || 0;
+    dailyStat.sctr2 = sctr.shift().sctr || 0;
+    dailyStat.sctr3 = sctr.shift().sctr || 0;
+    dailyStat.sctr4 = sctr.shift().sctr || 0;
+    dailyStat.sctr5 = sctr.shift().sctr || 0;
+    dailyStat.sctr6 = sctr.shift().sctr || 0;
+    dailyStat.sctr7 = sctr.shift().sctr || 0;
+    dailyStat.sctr8 = sctr.shift().sctr || 0;
+    dailyStat.sctr9 = sctr.shift().sctr || 0;
+    dailyStat.sctr10 = sctr.shift().sctr || 0;
+    dailyStat.sctr11 = sctr.shift().sctr || 0;
+    dailyStat.sctr12 = sctr.shift().sctr || 0;
+    dailyStat.sctr13 = sctr.shift().sctr || 0;
+    dailyStat.sctr14 = sctr.shift().sctr || 0;
+    dailyStat.sctr15 = sctr.shift().sctr || 0;
+    dailyStat.sctr16 = sctr.shift().sctr || 0;
+    dailyStat.sctr17 = sctr.shift().sctr || 0;
+    dailyStat.sctr18 = sctr.shift().sctr || 0;
+    dailyStat.sctr19 = sctr.shift().sctr || 0;
+    dailyStat.sctr20 = sctr.shift().sctr || 0;
+}
+
 /**
  * Process all dates in the database
  */
-function queryProcessDates() {
+function sqliteProcessMultipleDates() {
     // query db
     const sqlDateStr =
         "select dt from ( " +
@@ -73,7 +142,7 @@ function queryProcessDates() {
     const dates = dateStmt.all();
     if (dates.length > 0) { 
         dates.forEach((date) => {
-            var count = processSingleDate(date.dt, querySymbol);
+            var count = sqliteProcessSingleDate(date.dt, querySymbol);
             console.log(date.dt + " processed. count: " + count);
         });
     }
@@ -84,7 +153,7 @@ function queryProcessDates() {
  * @param {*} queryDate 
  * @param {*} querySymbol 
  */
-function processSingleDate(queryDate, querySymbol) {
+function sqliteProcessSingleDate(queryDate, querySymbol) {
     // format sql
     var count = 0;
     var sqlSymbolByDateStr =
@@ -112,7 +181,7 @@ function processSingleDate(queryDate, querySymbol) {
 /**
  * update market stats
  */
-function updateMarketStats() {
+function sqliteLocalUpdateMarketStats() {
     const sqlMarketStats = 'select dt, ' +
         'sum(case when chg_pct_1d >= 4 then 1 else 0 end)  up4pct1d, ' +
         'sum(case when chg_pct_1d<= -4 then 1 else 0 end)  dn4pct1d, ' +

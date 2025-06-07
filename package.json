@@ -8,6 +8,7 @@
     "start": "node api/index.ts",
     "load": "node utils/loadData.js",
     "process": "node --env-file=.env.local utils/procData.js",
+    "lp": "node utils/loadData.js && node --env-file=.env.local utils/procData.js",
     "dev": "node --env-file=.env.local api/index.ts"
   },
   "keywords": [],
