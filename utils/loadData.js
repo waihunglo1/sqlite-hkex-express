@@ -78,9 +78,8 @@ const fillDataByYahooFinance = async (data) => {
     const result = await yahooFinance.search(item.code, { region: 'HK', lang: 'zh_HK' }, { validateResult: false });
     if (result && result.quotes && result.quotes.length > 0) {
       item.name = result.quotes[0].shortName || item.name;
-      item.industry = !helper.isEmpty(result.quotes[0].industryDisp) ? result.quotes[0].industryDisp : "UNKNOWN";
-      item.sector = !helper.isEmpty(result.quotes[0].sectorDisp) ? result.quotes[0].sectorDisp : "UNKNOWN";
-
+      item.industry = !helper.isEmpty(result.quotes[0].industry) ? result.quotes[0].industry : "UNKNOWN";
+      item.sector = !helper.isEmpty(result.quotes[0].sector) ? result.quotes[0].sector : "UNKNOWN";
     }
 
     if (++count % 100 === 0) {
@@ -222,11 +221,11 @@ const queryDataByYahooFinance = async (data) => {
         };
         rows.push(price);
       }
+
+      console.log("Yahoo indexes Processed[" + index + "] : " + rows.length);
+      insertDailyStockPrice(rows);
     }
   }
-
-  insertDailyStockPrice(rows);
-  console.log("Yahoo indexes Processed:" + rows.length);
 }
 
 const runMain = async (data) => {
