@@ -1,6 +1,6 @@
 var express = require('express');
 var router = express.Router();
-const dbHelper = require('../../utils/dbConnHelper.js');
+const dbHelper = require('../../utils/pgDbConnHelper.js');
 /**
  * main function
  */

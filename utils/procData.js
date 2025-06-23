@@ -162,7 +162,7 @@ function sqliteProcessSingleDate(queryDate, querySymbol) {
       AND DAILY_STOCK_PRICE.symbol = stock.symbol`;
 
     if (!helper.isEmpty(querySymbol)) {
-        sqlSymbolByDateStr = sqlSymbolByDateStr + ' and symbol = ?';
+        sqlSymbolByDateStr = sqlSymbolByDateStr + ' and DAILY_STOCK_PRICE.symbol = ?';
     }
 
     // query db
@@ -361,42 +361,36 @@ function calculateTechnicalIndicator(priceHistory, priceStats, calculators) {
 
         if (priceHistory.length >= 5) {
             priceStats.sma05 = calculators.sma005Ind.nextValue(history.close);
-            priceStats.close > priceStats.sma05 ? priceStats.above_5d_sma = 1 : priceStats.above_5d_sma = 0;
+            priceStats.close >= priceStats.sma05 ? priceStats.above_5d_sma = 1 : priceStats.above_5d_sma = 0;
         }
 
         if (priceHistory.length >= 10) {
             priceStats.sma10 = calculators.sma010Ind.nextValue(history.close);
             priceStats.sma10turnover = calculators.sma010TurnoverInd.nextValue(history.close * history.volume);
-            priceStats.close > priceStats.sma10 ? priceStats.above_10d_sma = 1 : priceStats.above_10d_sma = 0;
         }
 
         if (priceHistory.length >= 20) {
             priceStats.sma20 = calculators.sma020Ind.nextValue(history.close);
             priceStats.sma20turnover = calculators.sma020TurnoverInd.nextValue(history.close * history.volume);
-            priceStats.close > priceStats.sma20 ? priceStats.above_20d_sma = 1 : priceStats.above_20d_sma = 0;
         }
 
         if (priceHistory.length >= 50) {
             priceStats.sma50 = calculators.sma050Ind.nextValue(history.close);
             priceStats.ema50 = calculators.ema050Ind.nextValue(history.close);
             priceStats.sma50turnover = calculators.sma050TurnoverInd.nextValue(history.close * history.volume);
-            priceStats.close > priceStats.sma50 ? priceStats.above_50d_sma = 1 : priceStats.above_50d_sma = 0;
         }
 
         if (priceHistory.length >= 100) {
             priceStats.sma100 = calculators.sma100Ind.nextValue(history.close);
-            priceStats.close > priceStats.sma100 ? priceStats.above_100d_sma = 1 : priceStats.above_100d_sma = 0;
         }
 
         if (priceHistory.length >= 150) {
             priceStats.sma150 = calculators.sma150Ind.nextValue(history.close);
-            priceStats.close > priceStats.sma150 ? priceStats.above_150d_sma = 1 : priceStats.above_150d_sma = 0;
         }
 
         if (priceHistory.length >= 200) {
             priceStats.sma200 = calculators.sma200Ind.nextValue(history.close);
             priceStats.ema200 = calculators.ema200Ind.nextValue(history.close);
-            priceStats.close > priceStats.sma200 ? priceStats.above_200d_sma = 1 : priceStats.above_200d_sma = 0;
         }
 
         if (priceHistory.length >= 26) {
@@ -427,7 +421,13 @@ function calculateTechnicalIndicator(priceHistory, priceStats, calculators) {
         lastQuote = history;
     });
 
-
+    // above? sma
+    priceStats.close >= priceStats.sma10 ? priceStats.above_10d_sma = 1 : priceStats.above_10d_sma = 0;
+    priceStats.close >= priceStats.sma20 ? priceStats.above_20d_sma = 1 : priceStats.above_20d_sma = 0;
+    priceStats.close >= priceStats.sma50 ? priceStats.above_50d_sma = 1 : priceStats.above_50d_sma = 0;
+    priceStats.close >= priceStats.sma100 ? priceStats.above_100d_sma = 1 : priceStats.above_100d_sma = 0;
+    priceStats.close >= priceStats.sma150 ? priceStats.above_150d_sma = 1 : priceStats.above_150d_sma = 0;
+    priceStats.close >= priceStats.sma200 ? priceStats.above_200d_sma = 1 : priceStats.above_200d_sma = 0;
 
     // calculate chg_pct
     calculateChgPct(priceHistory, priceStats);
