@@ -3,12 +3,16 @@ const util = require("util");
 const path = require('path');
 const { parse } = require("csv-parse");
 const config = require('config');
-const helper = require("./helper");
-const mmutils = require('./mm-utils.js');
 const yahooFinance = require('yahoo-finance2').default; // NOTE the .default
 const sqliteDb = require('better-sqlite3')(config.db.sqlite.file, {});
 const moment = require('moment');
 sqliteDb.pragma('journal_mode = WAL');
+
+// Import helper functions and utilities
+const helper = require("./helper");
+const mmutils = require('./mm-utils.js');
+const scraper = require('./scraper.js'); // Import the traverseDir function
+
 
 /**
  * Load data from HKEX and process it.
@@ -19,10 +23,16 @@ const loadData = async function () {
   if (!fs.existsSync(zipFullPath)) {
     console.info("Extraction path does not exist: " + zipFullPath);
     unzipFiles(zipFullPath);
-  } else {  
-    console.info("Extraction path exists: " + zipFullPath);
-    // const stat = fs.statSync(zipFullPath);  
-    traverseDirAndInsertData(zipFullPath);
+  } else {
+    await scraper.traverseDir().then(() => {
+      console.info("Extraction path exists: " + zipFullPath);
+      // const stat = fs.statSync(zipFullPath);  
+      traverseDirAndInsertData(zipFullPath);
+    }).catch((error) => {
+      console.error("Error during HKEX data extraction:", error);
+    });
+
+
   }
 }
 
@@ -59,6 +69,11 @@ const traverseDirAndInsertData = async (zipFullPath) => {
  * This function queries the HKEX data, fills it with additional information from Yahoo Finance,
  */
 const hkexDownload = async () => {
+  if( !config.hkex.enable) {
+    console.log("HKEX data download is disabled in the configuration.");
+    return;
+  }
+
   await mmutils.queryExcelView().then(async (data) => {
     await fillDataByYahooFinance(data);
     await insertStockData(data);

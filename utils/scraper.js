@@ -343,13 +343,11 @@ function process2Lines(prices, previousLine, currentLine, quoteDate) {
     prices.push(price);
 }
 
-function traverseDir() {
+const traverseDir = async () => {
     const pathToLook = config.hkex.download.path;
     const folderTarget = config.file.path.load.dir3;
     const targetPath = path.join(path.join(config.file.path.extract, helper.todayString()), folderTarget);
     const regex = /^d(\d{6})e\.htm$/; // Example regex for matching files like d250627e.htm
-
-
 
     if (!fs.existsSync(pathToLook)) {
         console.error("Directory does not exist: " + pathToLook);
@@ -362,14 +360,17 @@ function traverseDir() {
             const match = regex.exec(file.file);
             if (match) {
                 const destFile = `d${match[1]}e.txt`;
-                
                 scrapeData(file.path, path.join(targetPath, destFile));
             }
         });
     }
 }
 
+module.exports = {
+    traverseDir
+}
+
 /**
  * Main function to start the scraping process.
  */
-traverseDir();
+// traverseDir();
