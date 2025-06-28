@@ -11,12 +11,17 @@ const config = {
             extract: 'c:/Users/user/Downloads',
             load: {
                 dir1 : '/data/daily/hk/hkex stocks',
-                dir2 : '/data/daily/hk/hkex etfs'
+                dir2 : '/data/daily/hk/hkex etfs',
+                dir3 : '/data/daily/hk/hkex-quot'
             }
         } 
     },
     hkex: {
-        url: 'https://www.hkex.com.hk/chi/services/trading/securities/securitieslists/ListOfSecurities_c.xlsx'
+        url: 'https://www.hkex.com.hk/chi/services/trading/securities/securitieslists/ListOfSecurities_c.xlsx',
+        download: {
+            path: 'C:/Users/user/Downloads',
+            filePattern: 'd(\\d{6})e.htm'
+        }
     }
 };
 

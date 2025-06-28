@@ -21,7 +21,7 @@ const loadData = async function () {
     unzipFiles(zipFullPath);
   } else {  
     console.info("Extraction path exists: " + zipFullPath);
-    const stat = fs.statSync(zipFullPath);  
+    // const stat = fs.statSync(zipFullPath);  
     traverseDirAndInsertData(zipFullPath);
   }
 }
@@ -32,10 +32,10 @@ const loadData = async function () {
  * @returns 
  */
 const traverseDirAndInsertData = async (zipFullPath) => {
-  const pathToLoads = [config.file.path.load.dir1, config.file.path.load.dir2];
+  const pathToLoads = [config.file.path.load.dir1, config.file.path.load.dir2, config.file.path.load.dir3];
+  var paths = pathToLoads.map(dir => path.join(zipFullPath, dir));
 
-  for (const pathToLoad of pathToLoads) {
-    const fullPath = path.join(zipFullPath, pathToLoad);
+  for (const fullPath of paths) {
     if (!fs.existsSync(fullPath)) {
       console.error("Directory does not exist: " + fullPath);
       return;
@@ -242,4 +242,5 @@ const runMain = async (data) => {
   });
 }
 
+// parseAndInsertCsvData('c:/Users/user/Downloads/hkex/d250613e.txt');
 runMain();

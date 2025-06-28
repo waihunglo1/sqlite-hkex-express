@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const util = require('util');
 const extract = require('extract-zip')
+const { mkdir } = require('node:fs/promises');
 
 const reformatSymbolForHK = (symbol) => {
     const index = symbol.search(/.HK$/);
@@ -66,10 +67,20 @@ async function unzipFile(path, outputDir) {
     await extract(path, { dir: outputDir })
 }
 
+async function createDirectoryIfNotExists(directoryPath) {
+  try {
+    await mkdir(directoryPath, { recursive: true });
+    console.log(`Directory created or already exists at: ${directoryPath}`);
+  } catch (error) {
+    console.error(`Error creating directory: ${error.message}`);
+  }
+}
+
 module.exports = {
     reformatSymbolForHK,
     traverseDirectory,
     isEmpty,
+    createDirectoryIfNotExists,
     todayString,
     unzipFile
 };
