@@ -4,15 +4,13 @@ const path = require('path');
 const { parse } = require("csv-parse");
 const config = require('config');
 const yahooFinance = require('yahoo-finance2').default; // NOTE the .default
-const sqliteDb = require('better-sqlite3')(config.db.sqlite.file, {});
 const moment = require('moment');
-sqliteDb.pragma('journal_mode = WAL');
 
 // Import helper functions and utilities
 const helper = require("./helper");
 const mmutils = require('./mm-utils.js');
 const scraper = require('./scraper.js'); // Import the traverseDir function
-
+const sqliteHelper = require('./sqliteHelper.js');
 
 /**
  * Load data from HKEX and process it.
@@ -48,7 +46,6 @@ const traverseDirAndInsertData = async (zipFullPath) => {
   for (const fullPath of paths) {
     if (!fs.existsSync(fullPath)) {
       console.error("Directory does not exist: " + fullPath);
-      return;
     } else {
       console.log("Directory exists: " + fullPath);
       const files = helper.traverseDirectory(fullPath);
@@ -57,18 +54,14 @@ const traverseDirAndInsertData = async (zipFullPath) => {
     }
   }
 
-  const hcSql = 
-    `SELECT max(dt), min(dt), COUNT(1) as historialPriceCount, count(distinct symbol) as noOfProduct 
-    FROM DAILY_STOCK_PRICE`;
-  const row02 = sqliteDb.prepare(hcSql).get();
-  console.log(row02);
+  await sqliteHelper.queryDailyStockPriceStatistics();
 }
 
 /**
  * Download HKEX data and fill it with Yahoo Finance data.
  * This function queries the HKEX data, fills it with additional information from Yahoo Finance,
  */
-const hkexDownload = async () => {
+const fillStockData = async () => {
   if( !config.hkex.enable) {
     console.log("HKEX data download is disabled in the configuration.");
     return;
@@ -76,7 +69,7 @@ const hkexDownload = async () => {
 
   await mmutils.queryExcelView().then(async (data) => {
     await fillDataByYahooFinance(data);
-    await insertStockData(data);
+    await sqliteHelper.insertStockData(data);
     console.log("HKEX data downloaded successfully. Total stocks inserted: " + data.length);
   }).catch((error) => {
     console.error("Error downloading HKEX data:", error);
@@ -101,33 +94,6 @@ const fillDataByYahooFinance = async (data) => {
       console.log("Yahoo data file Processed " + count + " / " + data.length + " stocks");
     }
   }
-}
-
-/**
- * Insert stock data into the STOCK table.
- */
-async function insertStockData(stocks) {
-  const insert = sqliteDb.prepare('REPLACE INTO STOCK (symbol,name,industry,sector) VALUES (@code,@name,@industry,@sector)');
-  const insertMany = sqliteDb.transaction((stocks) => {
-    for (const stock of stocks) insert.run(stock);
-  });
-
-  insertMany(stocks);
-}
-
-/**
- * insert daily stock price
- */
-async function insertDailyStockPrice(prices) {
-  const insert = sqliteDb.prepare(
-    'REPLACE INTO DAILY_STOCK_PRICE (symbol,period,dt,tm,open,high,low,close,volume,adj_close,open_int) ' +
-    'VALUES (@symbol,@period,@dt,@tm,@open,@high,@low,@close,@volume,@adj_close,@open_int)');
-
-  const insertMany = sqliteDb.transaction((stockPrices) => {
-    for (const stockPrice of stockPrices) insert.run(stockPrice);
-  });
-
-  insertMany(prices);
 }
 
 /**
@@ -156,7 +122,7 @@ async function parseAndInsertCsvData(filePath) {
         rows.push(price);
       })
       .on("end", function () {
-        insertDailyStockPrice(rows);
+        sqliteHelper.insertDailyStockPrice(rows);
         resolve(rows.length);
       })
       .on("error", function (error) {
@@ -182,7 +148,7 @@ async function traverseDir(files) {
       await parseAndInsertCsvData(file.path);
       ++fileCount;
     } else {
-      console.log("Directory: " + file.path);
+      console.log("Traverse Directory: " + file.path);
       fileCount += await traverseDir(file.files);
     }
   }
@@ -205,13 +171,7 @@ function unzipFiles(fullPath) {
     }); 
 }
 
-/**
- * Main function to load data from HKEX and process it.
- */
-const row01 = sqliteDb.prepare('SELECT sqlite_version()').get();
-console.log(row01);
-
-const queryDataByYahooFinance = async (data) => {
+const loadIndexDataByYahooFinance = async () => {
   const indexes = ['^HSI', '^HSCE'];
   const queryOptions = { period1: '2024-01-01', /* ... */ };
 
@@ -238,24 +198,34 @@ const queryDataByYahooFinance = async (data) => {
       }
 
       console.log("Yahoo indexes Processed[" + index + "] : " + rows.length);
-      insertDailyStockPrice(rows);
+      await sqliteHelper.insertDailyStockPrice(rows);
     }
   }
 }
 
 const runMain = async (data) => {
-  hkexDownload().then(() => {
-    console.log("HKEX data download and processing completed.");
-    loadData().then(() => {
-      queryDataByYahooFinance();
+  await sqliteHelper.dumpSqliteVerion();
+
+  fillStockData().then(() => {
+    console.log("[INFO] HKEX data download and processing completed.");
+    loadIndexDataByYahooFinance().then(() => {
+      console.log("[INFO] Index data load completed.");
+      loadData().then(() => {
+        console.log("[INFO] CSV load file completed.");
+      }).catch((error) => {
+        console.error("[ERROR] during CSV download and processing:", error);
+      });
     }).catch((error) => {
-      console.error("Error during CSV download and processing:", error);
+      console.error("[ERROR] during index data load from yahoo", error);
     });
-    
   }).catch((error) => {
-    console.error("Error during HKEX data download and processing:", error);
+    console.error("[ERROR] during HKEX data download and processing:", error);
   });
 }
 
 // parseAndInsertCsvData('c:/Users/user/Downloads/hkex/d250613e.txt');
+
+/**
+ * Main function to load data from HKEX and process it.
+ */
 runMain();

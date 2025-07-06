@@ -7,6 +7,7 @@ const { FixedWidthParser } = require('fixed-width-parser');
 const { Readable } = require('stream');
 const moment = require('moment');
 const path = require('path');
+const sqliteHelper = require('./sqliteHelper.js');
 
 // local modules
 const config = require('config');
@@ -87,7 +88,7 @@ async function scrapeData(filePath, outputFilePath) {
 
     // Example: Get the title of the page
     const pageTitle = $('title').text();
-    console.log(`Page Title: ${pageTitle}`);
+    // console.log(`Page Title: ${pageTitle}`);
 
     // Example: Get all fonts from the page
     const fonts = [];
@@ -100,18 +101,11 @@ async function scrapeData(filePath, outputFilePath) {
     stringStream.push(fonts.join());
     stringStream.push(null); // Indicate end of stream
 
-    // await writeFileAsync(outputFilePath, fonts.join());
+    await writeFileAsync(outputFilePath + '.tmp', fonts.join());
     var prices = await processLineByLine(stringStream);
+    await sqliteHelper.insertDailyStockPrice(prices);
 
-    // dump prices to file
-    const pricesText = prices.map(price => {
-        return `${price.symbol},${price.period},${price.dt},${price.tm},${price.open},${price.high},${price.low},${price.close},${price.volume},${price.adj_close},${price.open_int}`;
-    });
-
-    pricesText.unshift('<TICKER>,<PER>,<DATE>,<TIME>,<OPEN>,<HIGH>,<LOW>,<CLOSE>,<VOL>,<OPENINT>'); // Add header
-
-    // Write the prices to the output file
-    await writeFileAsync(outputFilePath, pricesText.join('\n'));
+    console.log("Price updated : " + prices.length);
 }
 
 /**
@@ -332,10 +326,10 @@ function process2Lines(prices, previousLine, currentLine, quoteDate) {
         dt: quoteDate,
         tm: '000000',
         open: 0,
-        high: line01Data[0].high.trim(),
-        low: line02Data[0].low.trim(),
+        high: line01Data[0].high.trim() === '-' ? line02Data[0].close.trim() : line01Data[0].high.trim(),
+        low: line02Data[0].low.trim() === '-' ? line02Data[0].close.trim() : line02Data[0].low.trim(),
         close: line02Data[0].close.trim(),
-        volume: line01Data[0].sharesTraded.trim(),
+        volume: line01Data[0].sharesTraded.trim() === '-' ? '0' : line01Data[0].sharesTraded.trim(),
         adj_close: 0,
         open_int: 0
     };
@@ -354,14 +348,15 @@ const traverseDir = async () => {
         return;
     } else {
         console.log("Directory exists: " + pathToLook);
-        helper.createDirectoryIfNotExists(targetPath);
-        const files = helper.traverseDirectory(pathToLook);
-        files.forEach(file => {
-            const match = regex.exec(file.file);
-            if (match) {
-                const destFile = `d${match[1]}e.txt`;
-                scrapeData(file.path, path.join(targetPath, destFile));
-            }
+        helper.createDirectoryIfNotExists(targetPath).then(() => {
+            const files = helper.traverseDirectory(pathToLook);
+            files.forEach(file => {
+                const match = regex.exec(file.file);
+                if (match) {
+                    const destFile = `d${match[1]}e.txt`;
+                    scrapeData(file.path, path.join(targetPath, destFile));
+                }
+            });
         });
     }
 }
