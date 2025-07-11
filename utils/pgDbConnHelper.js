@@ -27,8 +27,13 @@ async function updateDailyStockStats(dailyStockStats) {
   console.log("Cleared existing daily stock stats data.");
 
   for (const dailyStockStat of dailyStockStats) {
-    var result = await insertDailyStockStats(dailyStockStat);
-    // console.log("Inserted daily stock stats: ", result);
+    try {
+      var result = await insertDailyStockStats(dailyStockStat);
+      // console.log("Inserted daily stock stats: ", result);
+    } catch (err) {
+      console.error('Database error:', err);
+      console.log("Inserted daily stock stats: ", dailyStockStat);
+    }
   }
 }
 

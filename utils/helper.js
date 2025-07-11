@@ -4,6 +4,11 @@ const util = require('util');
 const extract = require('extract-zip')
 const { mkdir } = require('node:fs/promises');
 
+/**
+ * 
+ * @param {*} symbol 
+ * @returns 
+ */
 const reformatSymbolForHK = (symbol) => {
     const index = symbol.search(/.HK$/);
     if(index < 0) {
@@ -25,6 +30,12 @@ const reformatSymbolForHK = (symbol) => {
     return code + ".HK";
 }
 
+/**
+ * 
+ * @param {*} dir 
+ * @param {*} result 
+ * @returns 
+ */
 const traverseDirectory = (dir, result = []) => {
     // list files in directory and loop through
     fs.readdirSync(dir).forEach((file) => {
@@ -50,6 +61,11 @@ const traverseDirectory = (dir, result = []) => {
     return result;
 };
 
+/**
+ * 
+ * @param {*} value 
+ * @returns 
+ */
 function isEmpty(value) {
     return (
         value === null || value === undefined || value === '' ||
@@ -58,15 +74,28 @@ function isEmpty(value) {
     );
 }
 
+/**
+ * 
+ * @returns 
+ */
 function todayString() {
     const today = new Date();
     return today.toISOString().split('T')[0]; // YYYY-MM-DD format
 }
 
+/**
+ * 
+ * @param {*} path 
+ * @param {*} outputDir 
+ */
 async function unzipFile(path, outputDir) {
     await extract(path, { dir: outputDir })
 }
 
+/**
+ * 
+ * @param {*} directoryPath 
+ */
 async function createDirectoryIfNotExists(directoryPath) {
   try {
     await mkdir(directoryPath, { recursive: true });

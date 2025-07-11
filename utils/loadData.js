@@ -21,17 +21,16 @@ const loadData = async function () {
   if (!fs.existsSync(zipFullPath)) {
     console.info("Extraction path does not exist: " + zipFullPath);
     unzipFiles(zipFullPath);
-  } else {
-    await scraper.traverseDir().then(() => {
-      console.info("Extraction path exists: " + zipFullPath);
-      // const stat = fs.statSync(zipFullPath);  
-      traverseDirAndInsertData(zipFullPath);
-    }).catch((error) => {
-      console.error("Error during HKEX data extraction:", error);
-    });
-
-
   }
+
+  // process files
+  await scraper.traverseDir().then(() => {
+    console.info("Extraction path exists: " + zipFullPath);
+    // const stat = fs.statSync(zipFullPath);  
+    traverseDirAndInsertData(zipFullPath);
+  }).catch((error) => {
+    console.error("Error during HKEX data extraction:", error);
+  });
 }
 
 /**
@@ -164,13 +163,15 @@ function unzipFiles(fullPath) {
   helper.unzipFile(config.file.path.hk, fullPath)
     .then(() => {
       console.log("HK files unzipped successfully. " + fullPath);
-      traverseDirAndInsertData(fullPath);
     })
     .catch((error) => {
       console.error("Error unzipping HK files:", error);
     }); 
 }
 
+/**
+ * 
+ */
 const loadIndexDataByYahooFinance = async () => {
   const indexes = ['^HSI', '^HSCE'];
   const queryOptions = { period1: '2024-01-01', /* ... */ };
@@ -203,6 +204,10 @@ const loadIndexDataByYahooFinance = async () => {
   }
 }
 
+/**
+ * 
+ * @param {*} data 
+ */
 const runMain = async (data) => {
   await sqliteHelper.dumpSqliteVerion();
 

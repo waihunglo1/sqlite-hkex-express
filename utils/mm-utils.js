@@ -5,6 +5,10 @@ const helper = require("./helper");
 const yahooFinance = require('yahoo-finance2').default; // NOTE the .default
 axios.defaults.timeout = 1000;
 
+/**
+ * 
+ * @returns 
+ */
 const queryExcelView = async () => {
     const excelFileUrl = config.get("hkex.url");
 
@@ -22,6 +26,11 @@ const queryExcelView = async () => {
     return reformatData(jsonData);
 }
 
+/**
+ * 
+ * @param {*} data 
+ * @returns 
+ */
 const reformatData = (data) => {
     return data
         .filter(function (item) {
@@ -38,6 +47,11 @@ const reformatData = (data) => {
         });
 }
 
+/**
+ * 
+ * @param {*} symbol 
+ * @returns 
+ */
 const reformatSymbolinHK = (symbol) => {
     // remove the last 4 characters
     if (symbol.charAt(0) == '0' && symbol.length > 4) {

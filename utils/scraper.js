@@ -326,15 +326,24 @@ function process2Lines(prices, previousLine, currentLine, quoteDate) {
         dt: quoteDate,
         tm: '000000',
         open: 0,
-        high: line01Data[0].high.trim() === '-' ? line02Data[0].close.trim() : line01Data[0].high.trim(),
-        low: line02Data[0].low.trim() === '-' ? line02Data[0].close.trim() : line02Data[0].low.trim(),
-        close: line02Data[0].close.trim(),
-        volume: line01Data[0].sharesTraded.trim() === '-' ? '0' : line01Data[0].sharesTraded.trim(),
+        high: isSpecialString(line01Data[0].high.trim()) ? line02Data[0].close.trim() : line01Data[0].high.trim(),
+        low: isSpecialString(line02Data[0].low.trim()) ? line02Data[0].close.trim() : line02Data[0].low.trim(),
+        close: isSpecialString(line02Data[0].close.trim()) ? '0' : line02Data[0].close.trim(),
+        volume: isSpecialString(line01Data[0].sharesTraded.trim()) ? '0' : line01Data[0].sharesTraded.trim(),
         adj_close: 0,
         open_int: 0
     };
 
     prices.push(price);
+}
+
+function isSpecialString(str) {
+    if (str === '-')
+        return true;
+    if (str === 'N/A')
+        return true;
+
+    return false;
 }
 
 const traverseDir = async () => {
