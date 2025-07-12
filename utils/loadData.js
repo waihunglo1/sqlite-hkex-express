@@ -39,7 +39,7 @@ const loadData = async function () {
  * @returns 
  */
 const traverseDirAndInsertData = async (zipFullPath) => {
-  const pathToLoads = [config.file.path.load.dir1, config.file.path.load.dir2, config.file.path.load.dir3];
+  const pathToLoads = [config.file.path.load.dir1, config.file.path.load.dir2];
   var paths = pathToLoads.map(dir => path.join(zipFullPath, dir));
 
   for (const fullPath of paths) {

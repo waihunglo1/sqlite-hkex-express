@@ -18,26 +18,35 @@ const line01 = new FixedWidthParser([
         name: 'code',
         start: 1,
         width: 5,
+        type: 'string'
     },
     {
         name: 'previousClose',
         start: 28,
         width: 9,
+        type: 'number', 
+        precision: 2
     },
     {
         name: 'ask',
         start: 37,
         width: 9,
+        type: 'number', 
+        precision: 2        
     },
     {
         name: 'high',
         start: 46,
         width: 9,
+        type: 'number', 
+        precision: 2        
     },
     {
         name: 'sharesTraded',
         start: 55,
         width: 20,
+        type: 'number', 
+        precision: 2        
     }
 ]);
 
@@ -46,21 +55,29 @@ const line02 = new FixedWidthParser([
         name: 'close',
         start: 28,
         width: 9,
+        type: 'number', 
+        precision: 2        
     },
     {
         name: 'bid',
         start: 37,
         width: 9,
+        type: 'number', 
+        precision: 2        
     },
     {
         name: 'low',
         start: 46,
         width: 9,
+        type: 'number', 
+        precision: 2        
     },
     {
         name: 'turnover',
         start: 55,
         width: 20,
+        type: 'number', 
+        precision: 2        
     }
 ]);
 
@@ -101,11 +118,11 @@ async function scrapeData(filePath, outputFilePath) {
     stringStream.push(fonts.join());
     stringStream.push(null); // Indicate end of stream
 
-    await writeFileAsync(outputFilePath + '.tmp', fonts.join());
-    var prices = await processLineByLine(stringStream);
+    await writeFileAsync(outputFilePath, fonts.join());
+    var {quoteDate, prices} = await processLineByLine(stringStream);
     await sqliteHelper.insertDailyStockPrice(prices);
 
-    console.log("Price updated : " + prices.length);
+    console.log(`${quoteDate} : ${prices.length}`);;
 }
 
 /**
@@ -116,7 +133,7 @@ async function scrapeData(filePath, outputFilePath) {
 async function writeFileAsync(filePath, content) {
     try {
         await fs.promises.writeFile(filePath, content, 'utf-8');
-        console.log(`File "${filePath}" has been successfully written.`);
+        // console.log(`File "${filePath}" has been successfully written.`);
     } catch (error) {
         console.error(`Error writing to file "${filePath}": ${error.message}`);
     }
@@ -209,7 +226,7 @@ async function processLineByLine(stringStream) {
         }
     }
 
-    return prices;
+    return {quoteDate, prices};
 }
 
 /**
@@ -224,7 +241,7 @@ function searchQuoteDate(line) {
         const day = match[1];
         const month = match[2];
         const year = match[3];
-        console.log(`Quote date found: ${day} ${month} ${year}`);
+        // console.log(`Quote date found: ${day} ${month} ${year}`);
         const momentObject = moment(`${day}/${month}/${year}`, 'DD/MMM/YYYY');
         if (momentObject.isValid()) {
             return momentObject.format('YYYYMMDD');
@@ -317,19 +334,19 @@ function process2Lines(prices, previousLine, currentLine, quoteDate) {
         return;
     }
 
-    const line01Data = line01.parse(previousLine);
-    const line02Data = line02.parse(currentLine);
+    const line01Data = convertValue(line01.parse(previousLine)[0]);
+    const line02Data = convertValue(line02.parse(currentLine)[0]);
 
     var price = {
-        symbol: line01Data[0].code.trim() + '.HK',
+        symbol: line01Data.code + '.HK',
         period: 'D',
         dt: quoteDate,
         tm: '000000',
         open: 0,
-        high: isSpecialString(line01Data[0].high.trim()) ? line02Data[0].close.trim() : line01Data[0].high.trim(),
-        low: isSpecialString(line02Data[0].low.trim()) ? line02Data[0].close.trim() : line02Data[0].low.trim(),
-        close: isSpecialString(line02Data[0].close.trim()) ? '0' : line02Data[0].close.trim(),
-        volume: isSpecialString(line01Data[0].sharesTraded.trim()) ? '0' : line01Data[0].sharesTraded.trim(),
+        high: line01Data.high === '0' ? line02Data.close : line01Data.high,
+        low: line02Data.low === '0' ? line02Data.close : line02Data.low,
+        close: line02Data.close,
+        volume: line01Data.sharesTraded,
         adj_close: 0,
         open_int: 0
     };
@@ -337,13 +354,18 @@ function process2Lines(prices, previousLine, currentLine, quoteDate) {
     prices.push(price);
 }
 
-function isSpecialString(str) {
-    if (str === '-')
-        return true;
-    if (str === 'N/A')
-        return true;
-
-    return false;
+function convertValue(obj) {
+    for (const key in obj) {
+        if (obj.hasOwnProperty(key)) {
+            var str = obj[key].trim();
+            if(str === '-' || str === 'N/A') {
+                str = '0';
+            }
+            obj[key] = str;
+        }
+    } 
+    
+    return obj;
 }
 
 const traverseDir = async () => {

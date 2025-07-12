@@ -16,8 +16,13 @@ const dumpSqliteVerion = async () => {
  */
 const queryDailyStockPriceStatistics = async () => {
     const hcSql =
-        `SELECT max(dt), min(dt), COUNT(1) as historialPriceCount, count(distinct symbol) as noOfProduct 
-    FROM DAILY_STOCK_PRICE`;
+        `SELECT 
+           max(dt) max_dt, 
+           min(dt) min_dt, 
+           COUNT(1) as historialPriceCount, 
+           count(distinct symbol) as noOfProduct 
+         FROM DAILY_STOCK_PRICE 
+         WHERE symbol not like '^%'`;
     const row02 = sqliteDb.prepare(hcSql).get();
     console.log("[INFO] sqlite db statistics");
     console.log(row02);
