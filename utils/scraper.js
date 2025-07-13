@@ -338,7 +338,7 @@ function process2Lines(prices, previousLine, currentLine, quoteDate) {
     const line02Data = convertValue(line02.parse(currentLine)[0]);
 
     var price = {
-        symbol: line01Data.code + '.HK',
+        symbol: helper.reformatSymbolForHK(line01Data.code + '.HK'),
         period: 'D',
         dt: quoteDate,
         tm: '000000',
