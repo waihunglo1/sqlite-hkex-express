@@ -233,6 +233,69 @@ function sqliteLocalUpdateMarketStats() {
 }
 
 /**
+ * update market stats
+ */
+function sqliteLocalUpdateSectorsStats() {
+    const sqlSectorStats =
+        `select 
+        dt,
+        case sector
+        when 'Basic Materials' then 'XLB'
+        when 'Communication Services' then 'XLC'
+        when 'Consumer Cyclical' then 'XLY'
+        when 'Consumer Cyclical' then 'XLY'
+        when 'Consumer Defensive' then 'XLP'
+        when 'Energy' then 'XLE'
+        when 'Financial Services' then 'XLF'
+        when 'Healthcare' then 'XLV'
+        when 'Industrials' then 'XLI'
+        when 'Real Estate' then 'XLF'
+        when 'Technology' then 'XLK'
+        when 'Utilities' then 'XLU'   
+        else 'XLX'
+        end sector,
+        round(cast(up4pct1d as float) / tot * 100.0, 2) u4sm, 
+        round(cast(dn4pct1d as float) / tot * 100.0, 2) d4sm,
+        round(cast(up0pct1d as float) / tot * 100.0, 2) sm
+        FROM
+        (
+            select 
+                stock.sector, DAILY_STOCK_STATS.dt,
+                sum(case when chg_pct_1d >= 4 then 1 else 0 end)  up4pct1d  , 
+                sum(case when chg_pct_1d<= -4 then 1 else 0 end)  dn4pct1d ,
+                sum(case when chg_pct_1d > 0  then 1 else 0 end)  up0pct1d ,
+                sum(case when chg_pct_1d < 0 then 1 else 0 end)  dn0pct1d ,
+                count(1) tot
+            from stock, DAILY_STOCK_STATS
+            where stock.symbol = DAILY_STOCK_STATS.symbol
+            and sector != 'UNKNOWN'
+            group by stock.sector, DAILY_STOCK_STATS.dt
+            order by sector
+        ) order by dt, sector
+        `;
+
+    const stmt = sqliteDb.prepare(sqlSectorStats);
+    const sectorStats = stmt.all();
+    
+    const INSERT_SQL = 
+      `REPLACE INTO DAILY_MARKET_STATS 
+      (dt, up4pct1d, dn4pct1d, up25pctin100d, dn25pctin100d, up25pctin20d, dn25pctin20d, 
+      up50pctin20d, dn50pctin20d, noofstocks, above200smapct, above150smapct, above20smapct, hsi, hsce) 
+      VALUES (?,?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    const stmtInsert = sqliteDb.prepare(INSERT_SQL);
+    marketStats.forEach((marketStat) => {
+        const info = stmtInsert.run(marketStat.dt, marketStat.up4pct1d, marketStat.dn4pct1d, marketStat.up25pctin100d, marketStat.dn25pctin100d, 
+            marketStat.up25pctin20d, marketStat.dn25pctin20d, marketStat.up50pctin20d, marketStat.dn50pctin20d, marketStat.noofstocks, 
+            marketStat.above200smapct, marketStat.above150smapct, marketStat.above20smapct, marketStat.hsi, marketStat.hsce);
+        if (info.changes <= 0) {
+            console.log("[ERROR] Inserted " + marketStat.dt);
+        }
+    });
+
+    console.log("Market stats updated. Total records: " + marketStats.length);
+}
+
+/**
  * Calculate statistics for a single stock price on a specific date
  * @param {*} stockPrice 
  * @param {*} queryDate 
