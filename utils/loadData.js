@@ -68,7 +68,6 @@ const fillStockData = async () => {
 
   await mmutils.queryExcelView().then(async (data) => {
     await fillDataByYahooFinance(data);
-    await sqliteHelper.insertStockData(data);
     console.log("HKEX data downloaded successfully. Total stocks inserted: " + data.length);
   }).catch((error) => {
     console.error("Error downloading HKEX data:", error);
@@ -89,10 +88,33 @@ const fillDataByYahooFinance = async (data) => {
       item.sector = !helper.isEmpty(result.quotes[0].sector) ? result.quotes[0].sector : "UNKNOWN";
     }
 
+    try {
+      item.marketCap = "0";
+      const queryOptions = { modules: ['summaryDetail'] }; // defaults
+      const result01 = await yahooFinance.quoteSummary(item.code, queryOptions, { validateResult: false });
+      // console.log("Yahoo data for " + item.code + " : " + result01.summaryDetail.marketCap);
+
+      if (result01 && result01.summaryDetail) {
+        item.marketCap = result01.summaryDetail.marketCap ? result01.summaryDetail.marketCap.toString() : "0";
+      }
+    } catch (error) {
+      if (error instanceof yahooFinance.errors.FailedYahooValidationError) {
+        // console.warn(`Skipping yf.quote("${item.code}"): [${error.name}] ${error.message}`);
+      } else if (error instanceof yahooFinance.errors.HTTPError) {
+        // console.warn(`Skipping yf.quote("${item.code}"): [${error.name}] ${error.message}`);
+      } else {
+        // console.warn(`Skipping yf.quote("${item.code}"): [${error.name}] ${error.message}`);
+      }
+    }
+
     if (++count % 100 === 0) {
       console.log("Yahoo data file Processed " + count + " / " + data.length + " stocks");
+      await sqliteHelper.insertStockData(data.slice(count - 100, count));
     }
   }
+
+  await sqliteHelper.insertStockData(data.slice(count, data.length));
+  console.log("Yahoo data file Processed " + count + " / " + data.length + " stocks");
 }
 
 /**

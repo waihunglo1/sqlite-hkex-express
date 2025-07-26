@@ -381,6 +381,11 @@ const traverseDir = async () => {
         console.log("Directory exists: " + pathToLook);
         helper.createDirectoryIfNotExists(targetPath).then(() => {
             const files = helper.traverseDirectory(pathToLook);
+            files.sort((a, b) => {
+                const numA = parseInt(a.match(/\d+/)); // Extract number from filename
+                const numB = parseInt(b.match(/\d+/));
+                return numA - numB; // Sort numerically
+                });
             files.forEach(file => {
                 const match = regex.exec(file.file);
                 if (match) {

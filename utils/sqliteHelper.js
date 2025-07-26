@@ -33,9 +33,15 @@ const queryDailyStockPriceStatistics = async () => {
  * Insert stock data into the STOCK table.
  */
 async function insertStockData(stocks) {
-    const insert = sqliteDb.prepare('REPLACE INTO STOCK (symbol,name,industry,sector) VALUES (@code,@name,@industry,@sector)');
+    const insert = sqliteDb.prepare('REPLACE INTO STOCK (symbol,name,industry,sector,market_cap) VALUES (@code,@name,@industry,@sector,@marketCap)');
     const insertMany = sqliteDb.transaction((stocks) => {
-        for (const stock of stocks) insert.run(stock);
+        for (const stock of stocks) {
+            try {
+                insert.run(stock);
+            } catch (error) {
+                console.error(`Error inserting stock ${stock.symbol}:`, error);
+            }   
+        }
     });
 
     insertMany(stocks);

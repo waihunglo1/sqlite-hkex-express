@@ -169,6 +169,7 @@ function sqliteLocalUpdateSectorsStats() {
                 sum(case when chg_pct_1d<= -4 then 1 else 0 end)  dn4pct1d ,
                 sum(case when chg_pct_1d > 0  then 1 else 0 end)  up0pct1d ,
                 sum(case when chg_pct_1d < 0 then 1 else 0 end)  dn0pct1d ,
+                sum(case when chg_pct_1d < 0 then 1 else 0 end)  dn0pct1d ,
                 count(1) tot
             from stock, DAILY_STOCK_STATS
             where stock.symbol = DAILY_STOCK_STATS.symbol
