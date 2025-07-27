@@ -380,10 +380,10 @@ const traverseDir = async () => {
     } else {
         console.log("Directory exists: " + pathToLook);
         helper.createDirectoryIfNotExists(targetPath).then(() => {
-            const files = helper.traverseDirectory(pathToLook);
+            const files = helper.traverseDirectory(pathToLook, regex);
             files.sort((a, b) => {
-                const numA = parseInt(a.match(/\d+/)); // Extract number from filename
-                const numB = parseInt(b.match(/\d+/));
+                const numA = parseInt(a.file.match(/\d+/)); // Extract number from filename
+                const numB = parseInt(b.file.match(/\d+/));
                 return numA - numB; // Sort numerically
                 });
             files.forEach(file => {
@@ -404,4 +404,4 @@ module.exports = {
 /**
  * Main function to start the scraping process.
  */
-// traverseDir();
+traverseDir();

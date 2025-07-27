@@ -36,7 +36,7 @@ const reformatSymbolForHK = (symbol) => {
  * @param {*} result 
  * @returns 
  */
-const traverseDirectory = (dir, result = []) => {
+const traverseDirectory = (dir, regex, result = []) => {
     // list files in directory and loop through
     fs.readdirSync(dir).forEach((file) => {
 
@@ -52,11 +52,18 @@ const traverseDirectory = (dir, result = []) => {
             fileStats.type = 'dir';
             fileStats.files = [];
             result.push(fileStats);
-            return traverseDirectory(fPath, fileStats.files)
+            return traverseDirectory(fPath, regex, fileStats.files)
         }
 
-        fileStats.type = 'file';
-        result.push(fileStats);
+        // if file path matches regex, add it to the result
+        if (regex && regex.exec(fileStats.file)) {
+            fileStats.type = 'file';
+            result.push(fileStats);
+        } else {
+            // if no regex is provided, just add the file
+            fileStats.type = 'file';
+            result.push(fileStats);
+        }
     });
     return result;
 };
