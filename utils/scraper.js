@@ -368,7 +368,7 @@ function convertValue(obj) {
     return obj;
 }
 
-const traverseDir = async () => {
+const traverseDir = () => {
     const pathToLook = config.hkex.download.path;
     const folderTarget = config.file.path.load.dir3;
     const targetPath = path.join(path.join(config.file.path.extract, helper.todayString()), folderTarget);
@@ -379,20 +379,17 @@ const traverseDir = async () => {
         return;
     } else {
         console.log("Directory exists: " + pathToLook);
-        helper.createDirectoryIfNotExists(targetPath).then(() => {
+        helper.createDirectoryIfNotExists(targetPath).then(async () => {
             const files = helper.traverseDirectory(pathToLook, regex);
-            files.sort((a, b) => {
-                const numA = parseInt(a.file.match(/\d+/)); // Extract number from filename
-                const numB = parseInt(b.file.match(/\d+/));
-                return numA - numB; // Sort numerically
-                });
-            files.forEach(file => {
+            const promises = files.map(file => {
                 const match = regex.exec(file.file);
                 if (match) {
                     const destFile = `d${match[1]}e.txt`;
                     scrapeData(file.path, path.join(targetPath, destFile));
                 }
             });
+
+            const results = await Promise.all(promises);
         });
     }
 }
@@ -404,4 +401,4 @@ module.exports = {
 /**
  * Main function to start the scraping process.
  */
-traverseDir();
+// traverseDir();

@@ -3,6 +3,9 @@ const path = require('path');
 const util = require('util');
 const extract = require('extract-zip')
 const { mkdir } = require('node:fs/promises');
+const sqliteHelper = require('./sqliteHelper.js');
+const yahooFinance = require('yahoo-finance2').default; // NOTE the .default
+const moment = require('moment');
 
 /**
  * 
@@ -51,7 +54,7 @@ const traverseDirectory = (dir, regex, result = []) => {
         if (fs.statSync(fPath).isDirectory()) {
             fileStats.type = 'dir';
             fileStats.files = [];
-            result.push(fileStats);
+            // result.push(fileStats);
             return traverseDirectory(fPath, regex, fileStats.files)
         }
 
@@ -59,11 +62,7 @@ const traverseDirectory = (dir, regex, result = []) => {
         if (regex && regex.exec(fileStats.file)) {
             fileStats.type = 'file';
             result.push(fileStats);
-        } else {
-            // if no regex is provided, just add the file
-            fileStats.type = 'file';
-            result.push(fileStats);
-        }
+        } 
     });
     return result;
 };
@@ -112,11 +111,47 @@ async function createDirectoryIfNotExists(directoryPath) {
   }
 }
 
+/**
+ *  Parse and insert CSV data into the database.
+ */
+const loadIndexDataByYahooFinance = async () => {
+  const indexes = ['^HSI', '^HSCE'];
+  const queryOptions = { period1: '2024-01-01', /* ... */ };
+
+  for (const index of indexes) {
+    const result01 = await yahooFinance.chart(index, queryOptions);
+
+    var rows = [];
+    if (result01 && result01.quotes && result01.quotes.length > 0) {
+      for (const quote of result01.quotes) {
+        var price = {
+          symbol: result01.meta.symbol,
+          period: 'D',
+          dt: moment(quote.date).format('YYYYMMDD'),
+          tm: '000000',
+          open: quote.open,
+          high: quote.high,
+          low: quote.low,
+          close: quote.close,
+          volume: quote.volume,
+          adj_close: quote.adjclose,
+          open_int: 0
+        };
+        rows.push(price);
+      }
+
+      console.log("Yahoo indexes Processed[" + index + "] : " + rows.length);
+      await sqliteHelper.insertDailyStockPrice(rows);
+    }
+  }
+}
+
 module.exports = {
     reformatSymbolForHK,
     traverseDirectory,
     isEmpty,
     createDirectoryIfNotExists,
     todayString,
-    unzipFile
+    unzipFile,
+    loadIndexDataByYahooFinance
 };

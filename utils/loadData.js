@@ -26,7 +26,6 @@ const loadData = async function () {
   // process files
   await scraper.traverseDir().then(() => {
     console.info("Extraction path exists: " + zipFullPath);
-    // const stat = fs.statSync(zipFullPath);  
     traverseDirAndInsertData(zipFullPath);
   }).catch((error) => {
     console.error("Error during HKEX data extraction:", error);
@@ -54,67 +53,6 @@ const traverseDirAndInsertData = async (zipFullPath) => {
   }
 
   await sqliteHelper.queryDailyStockPriceStatistics();
-}
-
-/**
- * Download HKEX data and fill it with Yahoo Finance data.
- * This function queries the HKEX data, fills it with additional information from Yahoo Finance,
- */
-const fillStockData = async () => {
-  if( !config.hkex.enable) {
-    console.log("HKEX data download is disabled in the configuration.");
-    return;
-  }
-
-  await mmutils.queryExcelView().then(async (data) => {
-    await fillDataByYahooFinance(data);
-    console.log("HKEX data downloaded successfully. Total stocks inserted: " + data.length);
-  }).catch((error) => {
-    console.error("Error downloading HKEX data:", error);
-  });
-}
-
-/**
- * Fill missing data in the HKEX dataset using Yahoo Finance API.
- * @param {*} data 
- */
-const fillDataByYahooFinance = async (data) => {
-  var count = 0;
-  for (const item of data) {
-    const result = await yahooFinance.search(item.code, { region: 'HK', lang: 'zh_HK' }, { validateResult: false });
-    if (result && result.quotes && result.quotes.length > 0) {
-      item.name = result.quotes[0].shortName || item.name;
-      item.industry = !helper.isEmpty(result.quotes[0].industry) ? result.quotes[0].industry : "UNKNOWN";
-      item.sector = !helper.isEmpty(result.quotes[0].sector) ? result.quotes[0].sector : "UNKNOWN";
-    }
-
-    try {
-      item.marketCap = "0";
-      const queryOptions = { modules: ['summaryDetail'] }; // defaults
-      const result01 = await yahooFinance.quoteSummary(item.code, queryOptions, { validateResult: false });
-      // console.log("Yahoo data for " + item.code + " : " + result01.summaryDetail.marketCap);
-
-      if (result01 && result01.summaryDetail) {
-        item.marketCap = result01.summaryDetail.marketCap ? result01.summaryDetail.marketCap.toString() : "0";
-      }
-    } catch (error) {
-      if (error instanceof yahooFinance.errors.FailedYahooValidationError) {
-        // console.warn(`Skipping yf.quote("${item.code}"): [${error.name}] ${error.message}`);
-      } else if (error instanceof yahooFinance.errors.HTTPError) {
-        // console.warn(`Skipping yf.quote("${item.code}"): [${error.name}] ${error.message}`);
-      } else {
-        // console.warn(`Skipping yf.quote("${item.code}"): [${error.name}] ${error.message}`);
-      }
-    }
-
-    if (++count % 100 === 0) {
-      console.log("Yahoo data file Processed " + count + " / " + data.length + " stocks");
-      await sqliteHelper.insertStockData(data.slice(count - 100, count));
-    }
-  }
-
-  await sqliteHelper.insertStockData(data.slice(count, data.length));
-  console.log("Yahoo data file Processed " + count + " / " + data.length + " stocks");
 }
 
 /**
@@ -193,60 +131,20 @@ function unzipFiles(fullPath) {
 
 /**
  * 
- */
-const loadIndexDataByYahooFinance = async () => {
-  const indexes = ['^HSI', '^HSCE'];
-  const queryOptions = { period1: '2024-01-01', /* ... */ };
-
-  for (const index of indexes) {
-    const result01 = await yahooFinance.chart(index, queryOptions);
-
-    var rows = [];
-    if (result01 && result01.quotes && result01.quotes.length > 0) {
-      for (const quote of result01.quotes) {
-        var price = {
-          symbol: result01.meta.symbol,
-          period: 'D',
-          dt: moment(quote.date).format('YYYYMMDD'),
-          tm: '000000',
-          open: quote.open,
-          high: quote.high,
-          low: quote.low,
-          close: quote.close,
-          volume: quote.volume,
-          adj_close: quote.adjclose,
-          open_int: 0
-        };
-        rows.push(price);
-      }
-
-      console.log("Yahoo indexes Processed[" + index + "] : " + rows.length);
-      await sqliteHelper.insertDailyStockPrice(rows);
-    }
-  }
-}
-
-/**
- * 
  * @param {*} data 
  */
 const runMain = async (data) => {
   await sqliteHelper.dumpSqliteVerion();
 
-  fillStockData().then(() => {
-    console.log("[INFO] HKEX data download and processing completed.");
-    loadIndexDataByYahooFinance().then(() => {
-      console.log("[INFO] Index data load completed.");
-      loadData().then(() => {
-        console.log("[INFO] CSV load file completed.");
-      }).catch((error) => {
-        console.error("[ERROR] during CSV download and processing:", error);
-      });
+  loadIndexDataByYahooFinance().then(() => {
+    console.log("[INFO] Index data load completed.");
+    loadData().then(() => {
+      console.log("[INFO] CSV load file completed.");
     }).catch((error) => {
-      console.error("[ERROR] during index data load from yahoo", error);
+      console.error("[ERROR] during CSV download and processing:", error);
     });
   }).catch((error) => {
-    console.error("[ERROR] during HKEX data download and processing:", error);
+    console.error("[ERROR] during index data load from yahoo", error);
   });
 }
 
@@ -255,4 +153,6 @@ const runMain = async (data) => {
 /**
  * Main function to load data from HKEX and process it.
  */
+// process.env.NO_PROXY = "*"; // Or a specific list of hosts
+
 runMain();

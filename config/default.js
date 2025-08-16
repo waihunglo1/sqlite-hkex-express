@@ -20,8 +20,9 @@ const config = {
         enable: true,
         url: 'https://www.hkex.com.hk/chi/services/trading/securities/securitieslists/ListOfSecurities_c.xlsx',
         download: {
-            path: 'C:/Users/user/Downloads',
-            filePattern: 'd(\\d{6})e.htm'
+            path: 'C:/Users/user/Downloads/hkex-quote',
+            filePattern: 'd(\\d{6})e.htm',
+            listOfSecurities: 'ListOfSecurities_c.xlsx'
         }
     }
 };
