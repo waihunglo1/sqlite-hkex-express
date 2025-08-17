@@ -22,6 +22,16 @@ async function updateMarketStats(marketStats) {
     }
 }
 
+async function updateSectorStats(sectorStats) {
+    await sql`delete from DAILY_SECTORS_STATS;`; // Clear existing data
+    console.log("Cleared existing sector stats data.");
+
+    for (const sectorStat of sectorStats) {
+        var result = await insertSectorStats(sectorStat);
+        // console.log("Inserted market stats: ", result);
+    }
+}
+
 async function updateDailyStockStats(dailyStockStats) {
   await sql`delete from daily_stock_stats;`; // Clear existing data
   console.log("Cleared existing daily stock stats data.");
@@ -87,8 +97,47 @@ async function insertMarketStats(marketStat) {
   return result[0];
 }
 
+async function insertSectorStats(sectorStats) {
+  const result = await sql`
+    INSERT INTO daily_sectors_stats (dt, 
+      XLB_U4SM,  XLB_D4SM,  XLB_SM, 
+      XLC_U4SM,  XLC_D4SM,  XLC_SM, 
+      XLY_U4SM,  XLY_D4SM,  XLY_SM, 
+      XLP_U4SM,  XLP_D4SM,  XLP_SM, 
+      XLE_U4SM,  XLE_D4SM,  XLE_SM, 
+      XLF_U4SM,  XLF_D4SM,  XLF_SM, 
+      XLV_U4SM,  XLV_D4SM,  XLV_SM, 
+      XLI_U4SM,  XLI_D4SM,  XLI_SM, 
+      XLRE_U4SM, XLRE_D4SM, XLRE_SM, 
+      XLK_U4SM,  XLK_D4SM,  XLK_SM, 
+      XLU_U4SM,  XLU_D4SM,  XLU_SM, 
+      XLX_U4SM,  XLX_D4SM,  XLX_SM    
+    
+    )
+    VALUES (
+    ${sectorStats.dt}, 
+    ${sectorStats.XLB_U4SM}, ${sectorStats.XLB_D4SM}, ${sectorStats.XLB_SM},
+    ${sectorStats.XLC_U4SM}, ${sectorStats.XLC_D4SM}, ${sectorStats.XLC_SM},
+    ${sectorStats.XLY_U4SM}, ${sectorStats.XLY_D4SM}, ${sectorStats.XLY_SM},
+    ${sectorStats.XLP_U4SM}, ${sectorStats.XLP_D4SM}, ${sectorStats.XLP_SM},
+    ${sectorStats.XLE_U4SM}, ${sectorStats.XLE_D4SM}, ${sectorStats.XLE_SM},
+    ${sectorStats.XLF_U4SM}, ${sectorStats.XLF_D4SM}, ${sectorStats.XLF_SM},
+    ${sectorStats.XLV_U4SM}, ${sectorStats.XLV_D4SM}, ${sectorStats.XLV_SM},
+    ${sectorStats.XLI_U4SM}, ${sectorStats.XLI_D4SM}, ${sectorStats.XLI_SM},
+    ${sectorStats.XLRE_U4SM}, ${sectorStats.XLRE_D4SM}, ${sectorStats.XLRE_SM},
+    ${sectorStats.XLK_U4SM}, ${sectorStats.XLK_D4SM}, ${sectorStats.XLK_SM},
+    ${sectorStats.XLU_U4SM}, ${sectorStats.XLU_D4SM}, ${sectorStats.XLU_SM},
+    ${sectorStats.XLX_U4SM}, ${sectorStats.XLX_D4SM}, ${sectorStats.XLX_SM} 
+    )
+    RETURNING *;
+  `;
+
+  return result[0];
+}
+
 module.exports = {
     getAivenPgVersion,
     updateMarketStats,
-    updateDailyStockStats
+    updateDailyStockStats,
+    updateSectorStats
 };

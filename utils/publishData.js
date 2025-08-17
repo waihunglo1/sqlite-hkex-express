@@ -27,6 +27,7 @@ async function aivenDbUpdate() {
     var version = await avienDbHelper.getAivenPgVersion();
     console.log("Aiven Version: ", version);
 
+    // market stats
     const sqlMarketStats =
         `select dt, up4pct1d, dn4pct1d, up25pctin100d, dn25pctin100d, up25pctin20d, dn25pctin20d, up50pctin20d, dn50pctin20d, 
          noofstocks, above200smapct, above150smapct, above20smapct, hsi, hsce 
@@ -34,7 +35,14 @@ async function aivenDbUpdate() {
     const marketStats = sqliteDb.prepare(sqlMarketStats).all();
     await avienDbHelper.updateMarketStats(marketStats);
 
-    console.log("Aiven market stats updated. Total records: " + marketStats.length);
+    // sector status
+    const sqlSectorStats =
+        `select *
+        from DAILY_SECTORS_STATS`;
+    const sectorStats = sqliteDb.prepare(sqlSectorStats).all();
+    await avienDbHelper.updateSectorStats(sectorStats);
+
+    console.log("Aiven market stats updated. Total records: " + marketStats.length + ", sector status: " + sectorStats.length);
 }
 
 async function aivenDbUpdateForDailyStockStats() {

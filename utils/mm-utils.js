@@ -57,8 +57,8 @@ const reformatData = async (yahooFinance, data) => {
     for (const item of items) {
         await yahooFinanceFiller(yahooFinance, item);
 
-        if (++count % 100 === 0) {
-            console.log("Yahoo data file Processed " + count + " / " + data.length + " stocks");
+        if (++count % 500 === 0) {
+            console.log("[INFO] Yahoo data file Processed " + count + " / " + data.length + " stocks");
         }
     }
 

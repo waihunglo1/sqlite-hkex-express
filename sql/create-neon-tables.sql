@@ -110,3 +110,47 @@ CREATE TABLE PORTFOLIO_DATA (
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_portfolio_data ON PORTFOLIO_DATA (id);
+
+
+CREATE TABLE IF NOT EXISTS DAILY_SECTORS_STATS 
+(
+  dt               VARCHAR(10),
+  XLB_U4SM         REAL,
+  XLB_D4SM         REAL,  
+  XLB_SM           REAL, 
+  XLC_U4SM         REAL,
+  XLC_D4SM         REAL,  
+  XLC_SM           REAL, 
+  XLY_U4SM         REAL,
+  XLY_D4SM         REAL,  
+  XLY_SM           REAL, 
+  XLP_U4SM         REAL,
+  XLP_D4SM         REAL,  
+  XLP_SM           REAL, 
+  XLE_U4SM         REAL,
+  XLE_D4SM         REAL,  
+  XLE_SM           REAL, 
+  XLF_U4SM         REAL,
+  XLF_D4SM         REAL,  
+  XLF_SM           REAL,   
+  XLV_U4SM         REAL,
+  XLV_D4SM         REAL,  
+  XLV_SM           REAL, 
+  XLI_U4SM         REAL,
+  XLI_D4SM         REAL,  
+  XLI_SM           REAL, 
+  XLRE_U4SM         REAL,
+  XLRE_D4SM         REAL,  
+  XLRE_SM           REAL, 
+  XLK_U4SM         REAL,
+  XLK_D4SM         REAL,  
+  XLK_SM           REAL, 
+  XLU_U4SM         REAL,
+  XLU_D4SM         REAL,  
+  XLU_SM           REAL, 
+  XLX_U4SM         REAL,
+  XLX_D4SM         REAL,  
+  XLX_SM           REAL
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_DAILY_SECTORS_STATS ON DAILY_SECTORS_STATS (dt);
