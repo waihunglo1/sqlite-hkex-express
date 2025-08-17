@@ -4,7 +4,6 @@ const util = require('util');
 const extract = require('extract-zip')
 const { mkdir } = require('node:fs/promises');
 const sqliteHelper = require('./sqliteHelper.js');
-const yahooFinance = require('yahoo-finance2').default; // NOTE the .default
 const moment = require('moment');
 
 /**
@@ -114,12 +113,12 @@ async function createDirectoryIfNotExists(directoryPath) {
 /**
  *  Parse and insert CSV data into the database.
  */
-const loadIndexDataByYahooFinance = async () => {
+const loadIndexDataByYahooFinance = async (yahooFinance) => {
   const indexes = ['^HSI', '^HSCE'];
   const queryOptions = { period1: '2024-01-01', /* ... */ };
 
   for (const index of indexes) {
-    const result01 = await yahooFinance.chart(index, queryOptions);
+    const result01 = await yahooFinance.chart(index, queryOptions, { validateResult: false });
 
     var rows = [];
     if (result01 && result01.quotes && result01.quotes.length > 0) {
@@ -140,8 +139,8 @@ const loadIndexDataByYahooFinance = async () => {
         rows.push(price);
       }
 
-      console.log("Yahoo indexes Processed[" + index + "] : " + rows.length);
       await sqliteHelper.insertDailyStockPrice(rows);
+      console.log("Yahoo indexes Processed[" + index + "] : " + rows.length);
     }
   }
 }

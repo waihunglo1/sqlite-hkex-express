@@ -10,7 +10,7 @@ axios.defaults.timeout = 1000;
  * 
  * @returns 
  */
-const queryExcelView = async () => {
+const queryExcelView = async (yahooFinance) => {
     const excelFileUrl = config.get("hkex.url");
     const file = await (await fetch(excelFileUrl)).arrayBuffer();
     console.log("fetched file :" + excelFileUrl + " bytelength:" + file.byteLength); 
@@ -29,7 +29,7 @@ const queryExcelView = async () => {
     // convert to json
     const jsonData = XLSX.utils.sheet_to_json(worksheet, {header:1, blankrows: false}); 
     console.log("Row count:" + jsonData.length);
-    return reformatData(jsonData);
+    return reformatData(yahooFinance, jsonData);
 }
 
 /**
@@ -37,7 +37,7 @@ const queryExcelView = async () => {
  * @param {*} data 
  * @returns 
  */
-const reformatData = async (data) => {
+const reformatData = async (yahooFinance, data) => {
     const items = data
         .filter(function (item) {
             return item[2] && item[2].length > 0 && (item[2].indexOf("股本") > -1 || item[2].indexOf("交易所買賣產品") > -1);
@@ -55,7 +55,7 @@ const reformatData = async (data) => {
 
     var count = 0;
     for (const item of items) {
-        await yahooFinanceFiller(item);
+        await yahooFinanceFiller(yahooFinance, item);
 
         if (++count % 100 === 0) {
             console.log("Yahoo data file Processed " + count + " / " + data.length + " stocks");
@@ -80,7 +80,7 @@ const reformatSymbolinHK = (symbol) => {
 }
 
 
-const yahooFinanceFiller = async (item) => {
+const yahooFinanceFiller = async (yahooFinance, item) => {
     try {
         const result = await yahooFinance.search(item.code, { region: 'HK', lang: 'zh_HK' }, { validateResult: false });
         if (result && result.quotes && result.quotes.length > 0) {

@@ -47,7 +47,7 @@ function sqliteProcessMultipleDates() {
     if (dates.length > 0) { 
         dates.forEach((date) => {
             var count = sqliteProcessSingleDate(date.dt);
-            console.log(date.dt + " processed. count: " + count);
+            console.log("[INFO] " + date.dt + " processed. count: " + count);
         });
     }
 }
@@ -471,7 +471,13 @@ function calculateSctr(priceStats) {
  * @returns 
  */
 function calculatePPO01(priceStats) {
+    if (helper.isEmpty(priceStats.macd01) || helper.isEmpty(priceStats.macd02) || helper.isEmpty(priceStats.macd03)) {
+        console.log("[ERROR] macd01, macd02 or macd03 is empty for " + priceStats.symbol + " on " + priceStats.dt);
+        return 0;   
+    }
+
     if (helper.isEmpty(priceStats.macd01.histogram) || helper.isEmpty(priceStats.macd02.histogram) || helper.isEmpty(priceStats.macd03.histogram)) {
+        console.log("[ERROR] macd01, macd02 or macd03 is empty for " + priceStats.symbol + " on " + priceStats.dt);
         return 0;
     }
 
