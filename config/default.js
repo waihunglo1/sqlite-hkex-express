@@ -17,7 +17,7 @@ const config = {
         } 
     },
     hkex: {
-        enable: true,
+        enable: false,
         url: 'https://www.hkex.com.hk/chi/services/trading/securities/securitieslists/ListOfSecurities_c.xlsx',
         download: {
             path: 'C:/Users/user/Downloads/hkex-quote',

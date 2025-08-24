@@ -106,3 +106,15 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_DAILY_SECTORS_STATS ON DAILY_SECTORS_STATS
 
 select * from DAILY_SECTORS_STATS
 order by dt desc
+
+
+select * from daily_stock_stats
+where dt = '20250822'
+
+delete from daily_stock_stats
+where dt = '20250822'
+
+ALTER TABLE DAILY_STOCK_STATS ADD COLUMN vp_high real;
+ALTER TABLE DAILY_STOCK_STATS ADD COLUMN vp_low real;
+ALTER TABLE DAILY_STOCK_STATS ADD COLUMN vp_bullish real;
+ALTER TABLE DAILY_STOCK_STATS ADD COLUMN vp_bearish real;

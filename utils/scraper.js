@@ -119,6 +119,7 @@ async function scrapeData(filePath, outputFilePath) {
     stringStream.push(null); // Indicate end of stream
 
     await writeFileAsync(outputFilePath, fonts.join());
+    // console.log(`File written to ${outputFilePath}`);
     var {quoteDate, prices} = await processLineByLine(stringStream);
     await sqliteHelper.insertDailyStockPrice(prices);
 
@@ -313,7 +314,8 @@ function processSalesRecords(symbol, salesRecords, prices) {
     //    console.log(`${text}`);
     // }
 
-    prices.filter(price => price.symbol === symbol.trim() + '.HK').forEach(price => {
+    var formattedSymbol = helper.reformatSymbolForHK(symbol + '.HK');
+    prices.filter(price => price.symbol === formattedSymbol).forEach(price => {
         price.open = open;
     });
 }
@@ -381,6 +383,7 @@ const traverseDir = () => {
         console.log("Directory exists: " + pathToLook);
         helper.createDirectoryIfNotExists(targetPath).then(async () => {
             const files = helper.traverseDirectory(pathToLook, regex);
+            console.log(`Found ${files.length} files to process.`);
             const promises = files.map(file => {
                 const match = regex.exec(file.file);
                 if (match) {

@@ -39,6 +39,7 @@
     "sqlite": "^5.1.1",
     "sqlite3": "^5.1.7",
     "stream": "^0.0.3",
+    "technicalindicators": "^3.1.0",
     "trendline": "^1.0.0",
     "util": "^0.12.5",
     "xlsx": "^0.18.5",

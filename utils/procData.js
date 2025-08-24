@@ -2,6 +2,7 @@ const taIndicator = require('@debut/indicators');
 const { createTrend } = require('trendline');
 const helper = require("./helper");
 const config = require('config');
+const VolumeProfile = require('technicalindicators').VolumeProfile;
 
 const sqliteDb = require('better-sqlite3')(config.db.sqlite.file, {});
 sqliteDb.pragma('journal_mode = WAL');
@@ -352,6 +353,7 @@ function calculateStatistics(stockPrice, queryDate) {
     const stmt = sqliteDb.prepare('SELECT * FROM DAILY_STOCK_PRICE where symbol = ? and dt <= ? order by dt desc limit 200');
     const priceHistory = stmt.all(stockPrice.symbol, queryDate);
 
+    // initialize technical indicator calculators
     var calculators = {
         roc020Ind: new taIndicator.ROC(20),
         roc125Ind: new taIndicator.ROC(125),
@@ -428,19 +430,51 @@ function calculateStatistics(stockPrice, queryDate) {
         above_50d_sma: 0,
         above_20d_sma: 0,
         above_10d_sma: 0,
-        above_5d_sma: 0
+        above_5d_sma: 0,
+        vp_high: 0,
+        vp_low: 0,
+        vp_bullish: 0,
+        vp_bearish: 0,
     }
 
     // calculate technical indicators
     calculateTechnicalIndicator(priceHistory, priceStats, calculators);
     calculateSctr(priceStats);
+    calculateVolumeProfile(priceHistory, priceStats);
 
     // if(priceStats.sctr >= 75) {
     //    console.log(stockPrice.symbol + " price history length: " + priceHistory.length + " sctr: " + priceStats.sctr + " dt: " + priceStats.dt);
     // }
-    
     return priceStats;
 }
+
+/**
+ * calculate Volume Profile
+ */
+function calculateVolumeProfile(priceHistory, priceStats) {
+    var input = { high: [], low: [], open: [], close: [], volume: [] , noOfBars : 100};
+    var vpCount = 0;
+    priceHistory.map(priceHist => {
+        if (vpCount++ < 150) {
+            input.high.push(priceHist.high);
+            input.low.push(priceHist.low);
+            input.close.push(priceHist.close);
+            input.open.push(priceHist.open);
+            input.volume.push(priceHist.volume);
+        }
+    });
+
+    let volumeprofile = VolumeProfile.calculate(input);
+    let volSortVolProfile = volumeprofile.sort((a, b) => b.totalVolume - a.totalVolume);
+
+    if(volSortVolProfile.length > 0) {
+        let vp = volSortVolProfile[0];
+        priceStats.vp_high = vp.rangeEnd;
+        priceStats.vp_low = vp.rangeStart;
+        priceStats.vp_bullish = vp.bullishVolume;
+        priceStats.vp_bearish = vp.bearishVolume;
+    }
+}   
 
 /**
  * Calculate technical indicators for a stock price
@@ -450,6 +484,7 @@ function calculateStatistics(stockPrice, queryDate) {
  */
 function calculateTechnicalIndicator(priceHistory, priceStats, calculators) {
     var lastQuote = null;
+    var results = [];
 
     // calculate technical indicators
     priceHistory.reverse().forEach((history, idx) => {
@@ -657,8 +692,13 @@ function insertPriceStats(priceStats) {
       roc020, roc125, rsi014, sma200, sma150, sma100, sma050, sma020, sma010, sma005, sma003, 
       ema050, ema200, ema200pref, sma200pref, ema500pref, sma50pref, rsi14sctr, ppo01sctr, roc125sctr, sctr, 
       histDay, chg_pct_1d, chg_pct_5d, chg_pct_10d, chg_pct_20d, chg_pct_50d, chg_pct_100d, sma10turnover, 
-      sma20turnover, sma50turnover, above_200d_sma ,above_150d_sma ,above_100d_sma ,above_50d_sma, above_20d_sma  ,above_10d_sma  ,above_5d_sma)   
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+      sma20turnover, sma50turnover, above_200d_sma ,above_150d_sma ,above_100d_sma ,above_50d_sma, 
+      above_20d_sma ,above_10d_sma ,above_5d_sma,
+      vp_high, vp_low, vp_bullish, vp_bearish
+      )   
+      VALUES 
+      (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+      ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
     const stmt = sqliteDb.prepare(INSERT_SQL);
     const info = stmt.run(priceStats.symbol, priceStats.dt, priceStats.start_dt,
@@ -673,7 +713,8 @@ function insertPriceStats(priceStats) {
         priceStats.chg_pct_10d, priceStats.chg_pct_20d, priceStats.chg_pct_50d, priceStats.chg_pct_100d,
         priceStats.sma10turnover, priceStats.sma20turnover, priceStats.sma50turnover, 
         priceStats.above_200d_sma, priceStats.above_150d_sma, priceStats.above_100d_sma,
-        priceStats.above_50d_sma, priceStats.above_20d_sma, priceStats.above_10d_sma, priceStats.above_5d_sma 
+        priceStats.above_50d_sma, priceStats.above_20d_sma, priceStats.above_10d_sma, priceStats.above_5d_sma,
+        priceStats.vp_high, priceStats.vp_low, priceStats.vp_bullish, priceStats.vp_bearish 
     );
 
     if (info.changes <= 0) {
