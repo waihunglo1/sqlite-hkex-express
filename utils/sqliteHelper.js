@@ -1,3 +1,4 @@
+const { db } = require('@vercel/postgres');
 const config = require('config');
 const sqliteDb = require('better-sqlite3')(config.db.sqlite.file, {});
 const moment = require('moment');
@@ -37,7 +38,9 @@ async function insertStockData(stocks) {
     const insertMany = sqliteDb.transaction((stocks) => {
         for (const stock of stocks) {
             try {
-                insert.run(stock);
+                if(!unknownStockLogger(stock)) {
+                    insert.run(stock);
+                }
             } catch (error) {
                 console.error(`Error inserting stock ${stock.symbol}:`, error);
             }   
@@ -45,6 +48,36 @@ async function insertStockData(stocks) {
     });
 
     insertMany(stocks);
+}
+
+function unknownStockLogger(stock) {
+    if(stock.industry !== "UNKNOWN" && stock.sector !== "UNKNOWN") {  
+        return false;  
+    }
+    
+    // UNknown sector stock, check if it is already in the DB
+    const dbStock = queryStockByCode(stock);
+    if(dbStock && dbStock.length > 0) { 
+        return true;
+    }
+
+    const logTime = moment().format('YYYY-MM-DD HH:mm:ss');
+    console.log(`[${logTime}] [WARN] Unknown stock: ${stock.code} - ${stock.name}`);    
+
+    return false;
+}
+
+/**
+ * Process all dates in the database
+ */
+function queryStockByCode(stock) {
+    // query db
+    const sqlStr = `SELECT sector FROM STOCK where symbol = ?`;
+
+    const sqlStmt = sqliteDb.prepare(sqlStr);
+    const dbStock = sqlStmt.all(stock.code);
+
+    return dbStock;
 }
 
 

@@ -86,14 +86,14 @@ const yahooFinanceFiller = async (yahooFinance, item) => {
         if (result && result.quotes && result.quotes.length > 0) {
             item.name = result.quotes[0].shortName || item.name;
             item.industry = !helper.isEmpty(result.quotes[0].industry) ? result.quotes[0].industry : "UNKNOWN";
-            item.sector = !helper.isEmpty(result.quotes[0].sector) ? result.quotes[0].sector : "UNKNOWN";
-        }
+            item.sector = !helper.isEmpty(result.quotes[0].sector) ? result.quotes[0].sector : "UNKNOWN"; 
+        } 
 
         item.marketCap = "0";
         const queryOptions = { modules: ['summaryDetail'] }; // defaults
         const result01 = await yahooFinance.quoteSummary(item.code, queryOptions, { validateResult: false });
         if (result01 && result01.summaryDetail) {
-        item.marketCap = result01.summaryDetail.marketCap ? result01.summaryDetail.marketCap.toString() : "0";
+            item.marketCap = result01.summaryDetail.marketCap ? result01.summaryDetail.marketCap.toString() : "0";
         }
     } catch (error) {
         if (error instanceof yahooFinance.errors.FailedYahooValidationError) {
