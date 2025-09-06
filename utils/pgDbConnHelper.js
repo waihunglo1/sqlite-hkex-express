@@ -58,7 +58,7 @@ async function insertDailyStockStats(dailyStockStat) {
     histDay, chg_pct_1d, chg_pct_5d, chg_pct_10d, chg_pct_20d, chg_pct_50d, chg_pct_100d, 
     sma10turnover, sma20turnover, sma50turnover, 
     above_200d_sma ,above_150d_sma ,above_100d_sma ,above_50d_sma  ,above_20d_sma  ,above_10d_sma  ,above_5d_sma,
-    industry, sector, short_name)
+    industry, sector, short_name, vp_high, vp_low, vp_bullish, vp_bearish)
     VALUES (
     ${dailyStockStat.symbol}, ${dailyStockStat.dt}, ${dailyStockStat.start_dt}, ${dailyStockStat.open}, 
     ${dailyStockStat.high}, ${dailyStockStat.low}, ${dailyStockStat.close}, ${dailyStockStat.volume}, ${dailyStockStat.prev_open}, 
@@ -76,7 +76,8 @@ async function insertDailyStockStats(dailyStockStat) {
     ${dailyStockStat.chg_pct_100d}, ${dailyStockStat.sma10turnover}, ${dailyStockStat.sma20turnover}, ${dailyStockStat.sma50turnover}, 
     ${dailyStockStat.above_200d_sma}, ${dailyStockStat.above_150d_sma}, ${dailyStockStat.above_100d_sma}, ${dailyStockStat.above_50d_sma}, 
     ${dailyStockStat.above_20d_sma}, ${dailyStockStat.above_10d_sma}, ${dailyStockStat.above_5d_sma}, ${dailyStockStat.industry}, 
-    ${dailyStockStat.sector}, ${dailyStockStat.short_name}
+    ${dailyStockStat.sector}, ${dailyStockStat.short_name}, 
+    ${dailyStockStat.vp_high}, ${dailyStockStat.vp_low}, ${dailyStockStat.vp_bullish}, ${dailyStockStat.vp_bearish}
     )
     RETURNING *;
   `;
