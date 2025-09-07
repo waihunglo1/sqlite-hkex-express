@@ -30,7 +30,7 @@ async function aivenDbUpdate() {
     // market stats
     const sqlMarketStats =
         `select dt, up4pct1d, dn4pct1d, up25pctin100d, dn25pctin100d, up25pctin20d, dn25pctin20d, up50pctin20d, dn50pctin20d, 
-         noofstocks, above200smapct, above150smapct, above20smapct, hsi, hsce 
+         noofstocks, above200smapct, above150smapct, above50smapct, above20smapct, hsi, hsce 
          from daily_market_stats order by dt desc`;
     const marketStats = sqliteDb.prepare(sqlMarketStats).all();
     await avienDbHelper.updateMarketStats(marketStats);

@@ -88,10 +88,11 @@ async function insertDailyStockStats(dailyStockStat) {
 async function insertMarketStats(marketStat) {
   const result = await sql`
     INSERT INTO daily_market_stats (dt, up4pct1d, dn4pct1d, up25pctin100d, dn25pctin100d, up25pctin20d, dn25pctin20d, up50pctin20d, 
-    dn50pctin20d, noofstocks, above200smapct, above150smapct, above20smapct, hsi, hsce)
+    dn50pctin20d, noofstocks, above200smapct, above150smapct, above50smapct, above20smapct, hsi, hsce)
     VALUES (${marketStat.dt}, ${marketStat.up4pct1d}, ${marketStat.dn4pct1d}, ${marketStat.up25pctin100d}, ${marketStat.dn25pctin100d}, 
     ${marketStat.up25pctin20d}, ${marketStat.dn25pctin20d}, ${marketStat.up50pctin20d}, ${marketStat.dn50pctin20d}, ${marketStat.noofstocks}, 
-    ${marketStat.above200smapct}, ${marketStat.above150smapct}, ${marketStat.above20smapct}, ${marketStat.hsi}, ${marketStat.hsce})
+    ${marketStat.above200smapct}, ${marketStat.above150smapct}, ${marketStat.above50smapct}, ${marketStat.above20smapct}, ${marketStat.hsi}, 
+    ${marketStat.hsce})
     RETURNING *;
   `;
 

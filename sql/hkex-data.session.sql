@@ -232,6 +232,7 @@ order by sctr
 select symbol, close,  vp_low - close * 0.05, vp_high + close * 0.05 from "DAILY_STOCK_STATS"
 where dt = '20250905'
 and close between (vp_low - close * 0.05) and (vp_high + close * 0.05)
+and symbol = '1880.HK'
 and above_150d_sma > 0
 and sma10turnover > 20000000
 
