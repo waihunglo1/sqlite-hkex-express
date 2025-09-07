@@ -24,6 +24,11 @@ const config = {
             filePattern: 'd(\\d{6})e.htm',
             listOfSecurities: 'ListOfSecurities_c.xlsx'
         }
+    },
+    yahoofinance: {
+        historicalData: {
+            enable: false
+        }
     }
 };
 

@@ -29,6 +29,7 @@
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
     "extract-zip": "^2.0.1",
+    "fincal": "^1.0.6",
     "fixed-width-parser": "^3.0.0",
     "moment": "^2.30.1",
     "nodejs-file-downloader": "^4.13.0",
