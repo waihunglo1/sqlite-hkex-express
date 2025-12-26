@@ -12,6 +12,7 @@ const sqliteHelper = require('./sqliteHelper.js');
 // local modules
 const config = require('config');
 const helper = require("./helper");
+const { exit } = require('process');
 
 const line01 = new FixedWidthParser([
     {
@@ -215,7 +216,12 @@ async function processLineByLine(stringStream) {
                 const line01Data = salesRecordParser.parse(line);
                 if (!helper.isEmpty(line01Data[0].code)) {
                     if (!helper.isEmpty(symbol) && symbol != line01Data[0].code) {
-                        processSalesRecords(symbol, salesRecords, prices);
+                        try {
+                            processSalesRecords(symbol, salesRecords, prices);
+                        } catch (error) {
+                            console.error(`Error processing sales records for symbol [${symbol}]: ${error.message}`);
+                            exit(1);
+                        }
                     }
                     symbol = line01Data[0].code;
                     salesRecords = [];
@@ -301,11 +307,11 @@ function processSalesRecords(symbol, salesRecords, prices) {
         open = normalSession[0].split('-')[1];
     }
 
-    if (helper.isEmpty(open) && normalSession.length > 0) {
+    if (helper.isEmpty(open) && normalSession.length > 1) {
         open = normalSession[1].split('-')[1];
     }
 
-    if (helper.isEmpty(open) && auctionSession.length > 0) {
+    if (helper.isEmpty(open) && auctionSession.length > 1) {
         open = auctionSession[1].split('-')[1];
     }
 
@@ -404,4 +410,4 @@ module.exports = {
 /**
  * Main function to start the scraping process.
  */
-// traverseDir();
+traverseDir();

@@ -240,5 +240,29 @@ and (vp_high - close) / close > 0
 and (vp_high - close) / close < 0.05
 and sma10turnover > 20000000
 
-select * from DAILY_STOCK_STATS
+
+select * from DAILY_STOCK_STATS,
+(
+  select min(dt) start_dt, max(dt) end_dt
+  FROM
+  (
+    select dt from DAILY_MARKET_STATS
+    order by dt desc
+    limit 10
+  )
+) dates
+where DAILY_STOCK_STATS.dt between dates.start_dt and
+and DAILY_STOCK_STATS.dt = dates.end_dt 
+
+
 where dt = '20250905'
+
+
+select dt from ( 
+            SELECT dt, count(1) FROM DAILY_STOCK_PRICE 
+            group by dt 
+            order by dt desc 
+            limit 200 
+        ) 
+        except 
+        select dt from daily_stock_stats group by dt
