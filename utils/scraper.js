@@ -410,4 +410,4 @@ module.exports = {
 /**
  * Main function to start the scraping process.
  */
-traverseDir();
+// traverseDir();
