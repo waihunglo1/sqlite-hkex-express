@@ -4,13 +4,15 @@ const mmutils = require('./mm-utils.js');
 const config = require('config');
 const sqliteHelper = require('./sqliteHelper.js');
 const scraper = require('./scraper.js'); // Import the traverseDir function
-const yahooFinance = require('yahoo-finance2').default; // NOTE the .default
+const YahooFinance = require('yahoo-finance2').default; // NOTE the .default
 
 /**
  * Download HKEX data and fill it with Yahoo Finance data.
  * This function queries the HKEX data, fills it with additional information from Yahoo Finance,
  */
 const fillStockData = async (yahooFinance) => {
+  console.log("HKEX data enabled: " + config.hkex.enable);
+
   if( !config.hkex.enable) {
     console.log("HKEX data download is disabled in the configuration.");
     return;
@@ -28,6 +30,7 @@ const fillStockData = async (yahooFinance) => {
 /*
  * main function to execute the data loading and filling process
  */
+const yahooFinance = new YahooFinance({});
 helper.loadIndexDataByYahooFinance(yahooFinance).then(() => {
   fillStockData(yahooFinance).then(async () => {
     scraper.traverseDir();

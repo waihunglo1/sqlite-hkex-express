@@ -45,6 +45,6 @@
     "trendline": "^1.0.0",
     "util": "^0.12.5",
     "xlsx": "^0.18.5",
-    "yahoo-finance2": "^2.13.3"
+    "yahoo-finance2": "^3.11.2"
   }
 }
