@@ -124,7 +124,7 @@ async function scrapeData(filePath, outputFilePath) {
     var {quoteDate, prices} = await processLineByLine(stringStream);
     await sqliteHelper.insertDailyStockPrice(prices);
 
-    console.log(`${quoteDate} : ${prices.length}`);;
+    console.log(`[${filePath}] ${quoteDate} : ${prices.length}`);;
 }
 
 /**
