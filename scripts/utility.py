@@ -12,7 +12,7 @@ import time
 hkex_quote_dir_path = "/Users/user/Downloads/hkex-quote"
 
 # Define the number of days for the cutoff
-days_cutoff = 15
+days_cutoff = 6
 
 # Calculate the cutoff timestamp (15 days ago)
 # time.time() gives current time in seconds since the epoch
