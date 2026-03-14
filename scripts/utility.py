@@ -74,8 +74,12 @@ def downloadHtm(fileName):
         f.write(content)
         
     # Assert that the page title contains "Python"
-    assert "Hong Kong Exchanges and Clearing Limited" in driver.title
+    assert "Hong Kong Exchanges and Clearing Limited" in driver.title, "Can't download valid file : " + fileName
     print(f"Successfully saved HTML to: {save_path}")    
+
+  except AssertionError as e:
+    print(e)
+    os.remove(save_path)
 
   finally:
     # Give some time to see the result (optional)
