@@ -4,7 +4,12 @@ const mmutils = require('./mm-utils.js');
 const config = require('config');
 const sqliteHelper = require('./sqliteHelper.js');
 const scraper = require('./scraper.js'); // Import the traverseDir function
+
+// yahoo finance api
 const YahooFinance = require('yahoo-finance2').default; // NOTE the .default
+const yahooFinance = new YahooFinance({
+ suppressNotices: ["yahooSurvey"] // optional
+});
 
 /**
  * Download HKEX data and fill it with Yahoo Finance data.
@@ -30,7 +35,8 @@ const fillStockData = async (yahooFinance) => {
 /*
  * main function to execute the data loading and filling process
  */
-const yahooFinance = new YahooFinance({});
+
+
 helper.loadIndexDataByYahooFinance(yahooFinance).then(() => {
   fillStockData(yahooFinance).then(async () => {
     scraper.traverseDir();
