@@ -379,7 +379,8 @@ function convertValue(obj) {
 const traverseDir = () => {
     const pathToLook = config.hkex.download.path;
     const folderTarget = config.file.path.load.dir3;
-    const targetPath = path.join(path.join(config.file.path.extract, helper.todayString()), folderTarget);
+    const [year, month] = helper.todayYearMonth();
+    const targetPath = path.join(path.join(config.file.path.extract, year + month), folderTarget);
     const regex = /^d(\d{6})e\.htm$/; // Example regex for matching files like d250627e.htm
 
     if (!fs.existsSync(pathToLook)) {

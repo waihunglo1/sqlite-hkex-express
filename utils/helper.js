@@ -90,6 +90,16 @@ function todayString() {
 
 /**
  * 
+ * @returns 
+ */
+function todayYearMonth() {
+    const today = new Date();
+    const todayString = today.toISOString().split('T')[0]; // YYYY-MM-DD format
+    return [todayString.substring(0, 4).replace('-', ''), todayString.substring(5, 7).replace('-', '')];
+}
+
+/**
+ * 
  * @param {*} path 
  * @param {*} outputDir 
  */
@@ -152,5 +162,6 @@ module.exports = {
     createDirectoryIfNotExists,
     todayString,
     unzipFile,
-    loadIndexDataByYahooFinance
+    loadIndexDataByYahooFinance,
+    todayYearMonth
 };
