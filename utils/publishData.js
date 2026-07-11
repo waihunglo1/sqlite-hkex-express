@@ -62,6 +62,7 @@ async function aivenDbUpdateForDailyStockStats() {
 
     for(const dailyStat of dailyStockStats) {
         fillHistoricalSCTR(dailyStat);
+        fillHistoricalNormalizeRS(dailyStat);
     }
 
     await avienDbHelper.updateDailyStockStats(dailyStockStats);
@@ -101,5 +102,40 @@ function fillHistoricalSCTR(dailyStat) {
     dailyStat.sctr18 = sctr.shift().sctr || 0;
     dailyStat.sctr19 = sctr.shift().sctr || 0;
     dailyStat.sctr20 = sctr.shift().sctr || 0;
+}
+
+function fillHistoricalNormalizeRS(dailyStat) {
+    // long term indicator weighting
+    const sqlRS = `select normalise_rs from DAILY_STOCK_STATS where symbol = ? order by dt desc limit 20`;
+    const rs = sqliteDb.prepare(sqlRS).all(dailyStat.symbol);
+
+    if (rs.length < 20) {
+        console.log("Not enough rs data for " + dailyStat.symbol + ". Only " + rs.length + " records found.");
+        // Fill with zeros if not enough data
+        for (let i = rs.length; i < 20; i++) {
+            rs.push({ rs: 0 });
+        }
+    }
+
+    dailyStat.normalise_rs1 = rs.shift().normalise_rs || 0;
+    dailyStat.normalise_rs2 = rs.shift().normalise_rs || 0;
+    dailyStat.normalise_rs3 = rs.shift().normalise_rs || 0;
+    dailyStat.normalise_rs4 = rs.shift().normalise_rs || 0;
+    dailyStat.normalise_rs5 = rs.shift().normalise_rs || 0;
+    dailyStat.normalise_rs6 = rs.shift().normalise_rs || 0;
+    dailyStat.normalise_rs7 = rs.shift().normalise_rs || 0;
+    dailyStat.normalise_rs8 = rs.shift().normalise_rs || 0;
+    dailyStat.normalise_rs9 = rs.shift().normalise_rs || 0;
+    dailyStat.normalise_rs10 = rs.shift().normalise_rs || 0;
+    dailyStat.normalise_rs11 = rs.shift().normalise_rs || 0;
+    dailyStat.normalise_rs12 = rs.shift().normalise_rs || 0;
+    dailyStat.normalise_rs13 = rs.shift().normalise_rs || 0;
+    dailyStat.normalise_rs14 = rs.shift().normalise_rs || 0;
+    dailyStat.normalise_rs15 = rs.shift().normalise_rs || 0;
+    dailyStat.normalise_rs16 = rs.shift().normalise_rs || 0;
+    dailyStat.normalise_rs17 = rs.shift().normalise_rs || 0;
+    dailyStat.normalise_rs18 = rs.shift().normalise_rs || 0;
+    dailyStat.normalise_rs19 = rs.shift().normalise_rs || 0;
+    dailyStat.normalise_rs20 = rs.shift().normalise_rs || 0;
 }
 
