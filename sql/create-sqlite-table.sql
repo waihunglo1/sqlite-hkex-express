@@ -165,3 +165,17 @@ ALTER TABLE DAILY_STOCK_STATS ADD COLUMN vp_bearish real;
 
 
 ALTER TABLE DAILY_MARKET_STATS ADD COLUMN above50smapct real;
+
+ALTER TABLE DAILY_STOCK_STATS ADD COLUMN rs real;
+ALTER TABLE DAILY_STOCK_STATS ADD COLUMN normalise_rs real;
+ALTER TABLE DAILY_STOCK_STATS ADD COLUMN rs_priceOverSMA20 real;
+ALTER TABLE DAILY_STOCK_STATS ADD COLUMN rs_slopeSMA20 real;
+ALTER TABLE DAILY_STOCK_STATS ADD COLUMN rs_slopeSMA50 real;
+ALTER TABLE DAILY_STOCK_STATS ADD COLUMN rs_slopeSMA150 real;
+
+select * from "DAILY_STOCK_STATS"
+where dt = '20260710'
+
+select dt from daily_stock_stats group by dt order by dt desc
+
+delete from daily_stock_stats

@@ -3,6 +3,7 @@ const { createTrend } = require('trendline');
 const helper = require("./helper");
 const config = require('config');
 const VolumeProfile = require('technicalindicators').VolumeProfile;
+const simpleStatistics = require('simple-statistics');
 
 const sqliteDb = require('better-sqlite3')(config.db.sqlite.file, {});
 sqliteDb.pragma('journal_mode = WAL');
@@ -22,7 +23,15 @@ processDataLocal();
 function processDataLocal() {
     // process data by dates
     console.log("Start processing data. file path: " + config.db.sqlite.file);
-    helper.isEmpty(queryDate) ? sqliteProcessMultipleDates() : sqliteProcessSingleDate(queryDate, querySymbol);
+
+    if(! helper.isEmpty(queryDate) && !helper.isEmpty(querySymbol)) {
+        sqliteProcessSingleDate(queryDate, querySymbol);
+    } else if (!helper.isEmpty(queryDate)) {
+        sqliteProcessSingleDate(queryDate);
+    } else {
+        sqliteProcessMultipleDates();
+    }
+
     sqliteLocalUpdateMarketStats();
     sqliteLocalUpdateSectorsStats();
     console.log("Completed processing data. file path: " + config.db.sqlite.file);
@@ -75,13 +84,35 @@ function sqliteProcessSingleDate(queryDate, querySymbol) {
     const stmt = sqliteDb.prepare(sqlSymbolByDateStr);
     const symbols = helper.isEmpty(querySymbol) ? stmt.all(queryDate) : stmt.all(queryDate, querySymbol);
 
+    priceStatsList = [];
+
     for (const symbol of symbols) {
         var priceStats = calculateStatistics(symbol, queryDate);
-        insertPriceStats(priceStats);
-        count++;
+        priceStatsList.push(priceStats);
     }
+    
+    normalizeRelativeStrength(priceStatsList);
 
-    return count;
+    priceStatsList.map((priceStats) => {
+
+        if (priceStats.normalise_rs > 60) {
+            console.log("[INFO] " + priceStats.symbol + 
+                " processed. dt: " + priceStats.dt + 
+                " sctr: " + priceStats.sctr.toFixed(2) + 
+                " rs: " + priceStats.rs.toFixed(2) + 
+                " normalise_rs: " + priceStats.normalise_rs.toFixed(2) +
+                " sma20: " + priceStats.sma20.toFixed(2) +
+                " sma50: " + priceStats.sma50.toFixed(2) +
+                " sma150: " + priceStats.sma150.toFixed(2) +
+                " priceOverSMA20: " + priceStats.rs_priceOverSMA20.toFixed(2)
+            
+            
+            );
+        }
+        insertPriceStats(priceStats);
+    });
+
+    return priceStatsList.length;
 }
 
 /**
@@ -351,8 +382,11 @@ function newSectorStatus() {
  * @returns 
  */
 function calculateStatistics(stockPrice, queryDate) {
-    const stmt = sqliteDb.prepare('SELECT * FROM DAILY_STOCK_PRICE where symbol = ? and dt <= ? order by dt desc limit 200');
-    const priceHistory = stmt.all(stockPrice.symbol, queryDate);
+    const dailyStockPriceStmt = sqliteDb.prepare('SELECT * FROM DAILY_STOCK_PRICE where symbol = ? and dt <= ? order by dt desc limit 200');
+    const priceHistory = dailyStockPriceStmt.all(stockPrice.symbol, queryDate);
+
+    const dailyStockStatsStmt = sqliteDb.prepare('SELECT * FROM DAILY_STOCK_STATS where symbol = ? and dt < ? order by dt desc limit 200');
+    const priceStatsHistory = dailyStockStatsStmt.all(stockPrice.symbol, queryDate);
 
     // initialize technical indicator calculators
     var calculators = {
@@ -436,17 +470,84 @@ function calculateStatistics(stockPrice, queryDate) {
         vp_low: 0,
         vp_bullish: 0,
         vp_bearish: 0,
+        rs : 0,
+        normalise_rs: 0,
+        rs_priceOverSMA20: 0,
+        rs_slopeSMA20: 0,
+        rs_slopeSMA50: 0,
+        rs_slopeSMA150: 0,
     }
 
     // calculate technical indicators
     calculateTechnicalIndicator(priceHistory, priceStats, calculators);
     calculateSctr(priceStats);
     calculateVolumeProfile(priceHistory, priceStats);
+    calculateRelativeStrength(priceHistory, priceStats, priceStatsHistory);
 
     // if(priceStats.sctr >= 75) {
     //    console.log(stockPrice.symbol + " price history length: " + priceHistory.length + " sctr: " + priceStats.sctr + " dt: " + priceStats.dt);
     // }
     return priceStats;
+}
+
+function normalizeRelativeStrength(priceStats) {
+    var minRS = 0;
+    var maxRS = 0;
+    priceStats.map(ps => {
+        if (ps.rs < minRS) {
+            minRS = ps.rs;
+        }
+        if (ps.rs != Infinity && ps.rs > maxRS) {
+            maxRS = ps.rs;
+        }
+    })
+
+    console.log("minRS: " + minRS + " maxRS: " + maxRS);
+
+    priceStats.map(ps => {
+        if(ps.rs != Infinity) {
+            ps.normalise_rs = ((ps.rs - minRS) / (maxRS - minRS)) * 100;
+        }
+    });
+}
+
+function calculateRelativeStrength(priceHistory, priceStats, priceStatsHistory) {
+    const slopeSMA20 = calculateSMASlope(priceHistory, priceStats, priceStatsHistory, 20, 'sma020', 'sma20');
+    const slopeSMA50 = calculateSMASlope(priceHistory, priceStats, priceStatsHistory, 50, 'sma050', 'sma50');
+    const slopeSMA150 = calculateSMASlope(priceHistory, priceStats, priceStatsHistory, 150, 'sma150', 'sma150');
+    const priceOverSMA20 = priceStats.close / priceStats.sma20 * 100
+    const rs = 0.1 * priceOverSMA20 + 0.35 * slopeSMA20 + 0.4 * slopeSMA50 + 0.15 * slopeSMA150;
+    // console.log(priceStats.symbol + ":" + rs.toFixed(2) + "/" + priceOverSMA20.toFixed(2) + "/" + slopeSMA20.toFixed(2) + "/" + slopeSMA50.toFixed(2) + "/" + slopeSMA150.toFixed(2));
+
+    if(priceOverSMA20 > 300) {
+        console.log("[ERROR] " + priceStats.symbol + " priceOverSMA20: " + priceOverSMA20.toFixed(2) + " price / slopeSMA20: " + priceStats.close + " / "  + slopeSMA20.toFixed(2));
+        priceStats.rs = 0;
+    } 
+    else 
+    {
+        priceStats.rs = rs;
+    }
+
+    priceStats.rs_priceOverSMA20 = priceOverSMA20;
+    priceStats.rs_slopeSMA20 = slopeSMA20;
+    priceStats.rs_slopeSMA50 = slopeSMA50;
+    priceStats.rs_slopeSMA150 = slopeSMA150;
+}
+
+function calculateSMASlope(priceHistory, priceStats, priceStatsHistory, smaPeriod = 20, targetKey1 = 'sma020', targetKey2 = 'sma20') {
+
+    // first 19 priceStatsHistory
+    const sma20Data = priceStatsHistory.slice(0,smaPeriod - 1).map((prcStats, index) => [prcStats.dt, prcStats[targetKey1]]);
+    sma20Data.unshift([priceStats.dt, priceStats[targetKey2]]);
+    const dataForSlope = sma20Data.reverse().map((data, index) => [index , data[1]]);
+
+    // console.log("smaData: " + JSON.stringify(sma20Data));
+
+    const slope = simpleStatistics.linearRegression(dataForSlope).m; 
+
+    // console.log("slope: " + slope);
+
+    return slopeToDegrees(slope);
 }
 
 /**
@@ -667,8 +768,7 @@ function calculatePPO01(priceStats) {
     ];
 
     const trend = createTrend(data, 'x', 'y');
-    const radians = Math.atan2(trend.slope, 1); // Assuming run is 1
-    const degrees = radians * (180 / Math.PI);
+    const degrees = slopeToDegrees(trend.slope);
     var ppo01Score = 0;
     if(degrees >= 45) {
         ppo01Score = 5;
@@ -679,6 +779,11 @@ function calculatePPO01(priceStats) {
     }
 
     return ppo01Score;
+}
+
+function slopeToDegrees(slope) {
+    const radians = Math.atan(slope, 1);
+    return radians * (180 / Math.PI);
 }
 
 /**
@@ -695,11 +800,14 @@ function insertPriceStats(priceStats) {
       histDay, chg_pct_1d, chg_pct_5d, chg_pct_10d, chg_pct_20d, chg_pct_50d, chg_pct_100d, sma10turnover, 
       sma20turnover, sma50turnover, above_200d_sma ,above_150d_sma ,above_100d_sma ,above_50d_sma, 
       above_20d_sma ,above_10d_sma ,above_5d_sma,
-      vp_high, vp_low, vp_bullish, vp_bearish
+      vp_high, vp_low, vp_bullish, vp_bearish,
+      rs, normalise_rs, rs_priceOverSMA20, rs_slopeSMA20, rs_slopeSMA50, rs_slopeSMA150
       )   
       VALUES 
       (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-      ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+      ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+      ?, ?, ?, ?, ?, ?
+      )`;
 
     const stmt = sqliteDb.prepare(INSERT_SQL);
     const info = stmt.run(priceStats.symbol, priceStats.dt, priceStats.start_dt,
@@ -715,7 +823,9 @@ function insertPriceStats(priceStats) {
         priceStats.sma10turnover, priceStats.sma20turnover, priceStats.sma50turnover, 
         priceStats.above_200d_sma, priceStats.above_150d_sma, priceStats.above_100d_sma,
         priceStats.above_50d_sma, priceStats.above_20d_sma, priceStats.above_10d_sma, priceStats.above_5d_sma,
-        priceStats.vp_high, priceStats.vp_low, priceStats.vp_bullish, priceStats.vp_bearish 
+        priceStats.vp_high, priceStats.vp_low, priceStats.vp_bullish, priceStats.vp_bearish,
+        priceStats.rs, priceStats.normalise_rs, priceStats.rs_priceOverSMA20, priceStats.rs_slopeSMA20, 
+        priceStats.rs_slopeSMA50, priceStats.rs_slopeSMA150
     );
 
     if (info.changes <= 0) {
