@@ -176,6 +176,13 @@ ALTER TABLE DAILY_STOCK_STATS ADD COLUMN rs_slopeSMA150 real;
 select * from "DAILY_STOCK_STATS"
 where dt = '20260710'
 
-select dt from daily_stock_stats group by dt order by dt desc
+select dt from daily_stock_stats where dt >= '20260101'
 
-delete from daily_stock_stats
+delete from daily_stock_stats where dt >= '20260101'
+
+select * from "STOCK"
+order by last_updated desc 
+where symbol = '2715.HK'
+
+select * from "STOCK"
+order by last_updated desc

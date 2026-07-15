@@ -29,6 +29,7 @@ const fillStockData = async (yahooFinance) => {
     console.log("Stock data inserted into the database successfully.");   
   }).catch((error) => {
     console.error("Error downloading HKEX data:", error);
+    exit(1); // Exit the process with an error code
   });
 }
 

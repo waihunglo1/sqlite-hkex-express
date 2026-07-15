@@ -107,10 +107,10 @@ const yahooFinanceFiller = async (yahooFinance, item, startDate) => {
         }
 
     } catch (error) {
-        if (error instanceof yahooFinance.errors.FailedYahooValidationError) {
-        } else if (error instanceof yahooFinance.errors.HTTPError) {
+        if (error.name === 'FailedYahooValidationError') {
+            console.warn("Yahoo validation failed for symbol:", item.code);
         } else {
-            // console.error(error);
+            console.warn("Error load supplementary date for symbol:", item.code);
         }
     }
 }
