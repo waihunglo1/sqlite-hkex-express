@@ -186,3 +186,36 @@ where symbol = '2715.HK'
 
 select * from "STOCK"
 order by last_updated desc
+
+            select 
+                stock.sector, DAILY_STOCK_STATS.dt,
+                sum(case when chg_pct_1d >= 4 then 1 else 0 end)  up4pct1d  , 
+                sum(case when chg_pct_1d<= -4 then 1 else 0 end)  dn4pct1d ,
+                sum(case when chg_pct_1d > 0  then 1 else 0 end)  up0pct1d ,
+                sum(case when chg_pct_1d < 0 then 1 else 0 end)  dn0pct1d ,
+                sum(case when chg_pct_1d < 0 then 1 else 0 end)  dn0pct1d ,
+                count(1) tot
+            from stock, DAILY_STOCK_STATS
+            where stock.symbol = DAILY_STOCK_STATS.symbol
+            and sector != 'UNKNOWN'
+            group by stock.sector, DAILY_STOCK_STATS.dt
+            order by sector
+
+            select 
+                stock.sector, DAILY_STOCK_STATS.dt,
+                avg(normalise_rs), min(normalise_rs), max(normalise_rs), count(1) tot
+            from stock, DAILY_STOCK_STATS
+            where stock.symbol = DAILY_STOCK_STATS.symbol
+            and sector != 'UNKNOWN'
+            and normalise_rs > 50
+            group by stock.sector, DAILY_STOCK_STATS.dt
+            order by DAILY_STOCK_STATS.dt desc,    stock.sector    
+
+            select *
+            from stock, DAILY_STOCK_STATS
+            where stock.symbol = DAILY_STOCK_STATS.symbol
+            and sector != 'UNKNOWN'
+            and rs > 50
+            and sector = 'Financial Services'
+            and dt = '20260717'
+                 
