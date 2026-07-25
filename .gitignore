@@ -356,3 +356,5 @@ __marimo__/
 config.ini
 
 temp/
+
+scripts/**/*.pyc
