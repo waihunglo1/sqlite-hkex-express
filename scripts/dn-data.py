@@ -2,9 +2,9 @@ import time
 import os
 import utility as util
 from datetime import date, timedelta
+import configparser
 
-
-def downloadLastDays(targetDays):
+def downloadLastDays(hkexConfig, targetDays):
   # Get today's date
   today = date.today()
 
@@ -14,9 +14,19 @@ def downloadLastDays(targetDays):
   for dt in last_5_dates:
     if(util.isWeekDay(dt)):
         dateStr = dt.strftime("%y%m%d")
-        util.downloadHtm("d" + dateStr + "e.htm")
+        util.downloadHtm(hkexConfig, "d" + dateStr + "e.htm")
 
+#
+# Main program
+#
+config = configparser.ConfigParser()
+config.read('config/analyst-data.ini', encoding='utf-8')
+hkexConfig = config['HKEX']
+print(f"hkexConfig : {hkexConfig}") 
 
-#Main program
-util.removeHistorialFiles()
-downloadLastDays(7)  
+# download hkex stock list
+util.downloadByChrome(hkexConfig)
+
+# download stock price file
+util.removeHistorialFiles(hkexConfig)
+downloadLastDays(hkexConfig, 7)  

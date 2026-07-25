@@ -1,7 +1,8 @@
 import yfinance as yf
 import pandas as pd
 from yahooquery import Ticker
-
+import configparser
+import sqlite3
 
 def tickersFromXls():
     # Define converters to force the first 3 columns (by index 0, 1, 2) to string
@@ -44,37 +45,82 @@ def yahooQuery(tickerBatch):
 
     # 1. 獲取數據
     # Fetch the raw data dictionaries
-    summary = tickers.summary_detail
+    # summary = tickers.summary_detail
+    profile_data = tickers.asset_profile
     quote = tickers.quotes
-    print(len(summary), len(quote))
+    # print(len(profile_data), len(quote))
 
-    # 使用迴圈遍歷並列印每個股票的公司名稱
+    records = []
     for symbol in tickerBatch:
         try:
-            # print(quote[symbol])
-            # print(summary[symbol])
-            stock_name = quote[symbol]['longName']
-            # industry = quote[symbol]['industry']
-            # sector = quote[symbol]['sector']
-            print(f"{symbol}: {stock_name}")
-        except KeyError:
-            print(f"{symbol}: 無法獲取資料")
+            records.append({
+                'symbol': symbol,
+                'name'  : quote[symbol]['longName'],
+                'sector': profile_data[symbol]['sector'],
+                'industry': profile_data[symbol]['industry'],
+                'marketCap' : quote[symbol]['marketCap']
+            })
+            
+        except:
+            errorRecords.append(
+                {
+                    'symbol': symbol
+                }
+            )
+            # print(f"{symbol}: 無法獲取資料")
 
+    # update sqlite
+    if len(records) > 0:
+        updated = insertOrReplace(records)
+        print(f"Changed Row: {updated} data size: {len(records)}")
+
+def insertOrReplace(records):
+    df = pd.DataFrame(records)
+    print(df.to_markdown(index=False))
+
+    updated = 0
+    try:
+        with sqlite3.connect(sqliteFile, timeout=10) as conn:
+            cursor = conn.cursor()
+        
+            # Use SQLite "INSERT OR REPLACE" logic row-by-row
+            for _, row in df.iterrows():
+                cursor.execute('''
+                    REPLACE INTO STOCK (symbol,name,industry,sector,market_cap) VALUES (?, ?, ?, ?, ?)
+                ''', (row['symbol'], row['name'], row['industry'], row['sector'], row['marketCap']))
+                # 📜 獲取受影響的行數
+                updated += cursor.rowcount
+            
+            conn.commit()
+    except sqlite3.Error as e:
+        print(f"❌ ⚫ 其他 SQLite 錯誤: {e}")
+        exit
+    except Exception as e:
+        print(f"❌ ⚪ 未知錯誤: {e}")
+        exit
+
+    return updated
 #
 # Main Program
 # 
 
+# Initialize the parser
+config = configparser.ConfigParser()
+config.read('config/analyst-data.ini', encoding='utf-8')
+sqliteFile = config['SQLITE']['FILE']
+print(f"SQLITE : {sqliteFile}") 
+
+# read xls
 tickerList = tickersFromXls()
-print(len(tickerList))
+print(f"SIZE : {len(tickerList)}")
 
 # Split ticker_list into batches of 100 items
-csvData = []
+errorRecords = []
 batch_size = 100
 for i in range(0, len(tickerList), batch_size):
     tickerBatch = tickerList[i : i + batch_size]
     yahooQuery(tickerBatch)
 
-# Export to CSV
-df = pd.DataFrame(csvData)
-df.to_csv("c:/temp/optimized_batch_summary.csv", index=False)
-print("Data saved to optimized_batch_summary.csv")
+if len(errorRecords) > 0:
+    df = pd.DataFrame(errorRecords)
+    print(df.to_markdown(index=False))  
