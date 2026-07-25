@@ -25,7 +25,10 @@ hkexConfig = config['HKEX']
 print(f"hkexConfig : {hkexConfig}") 
 
 # download hkex stock list
-util.downloadByChrome(hkexConfig)
+targetUrl = hkexConfig['URL']
+downloadPath = hkexConfig['DOWNLOAD_PATH']
+downloadFileName = hkexConfig['listOfSecurities']
+util.downloadByChrome(targetUrl, downloadPath)
 
 # download stock price file
 util.removeHistorialFiles(hkexConfig)

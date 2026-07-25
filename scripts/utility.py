@@ -6,10 +6,8 @@ import os
 import datetime
 import time
 from pathlib import Path
-
-# Define the directory path where files need to be deleted
-# Replace '.' with the specific path, e.g., r'C:\Users\YourUser\Downloads\Test'
-hkex_quote_dir_path = "/Users/user/Downloads/hkex-quote"
+import posixpath
+from urllib.parse import urlsplit
 
 # Define the number of days for the cutoff
 days_cutoff = 6
@@ -81,7 +79,7 @@ def downloadHtm(hkexConfig, fileName):
             
         # Assert that the page title contains "Python"
         assert "Hong Kong Exchanges and Clearing Limited" in driver.title, "Can't download valid file : " + fileName
-        print(f"Successfully saved HTML to: {save_path}")    
+        print(f"Successfully saved HTML to: {save_path}")
 
     except AssertionError as e:
         print(e)
@@ -93,20 +91,7 @@ def downloadHtm(hkexConfig, fileName):
         # Close the browser session
         driver.quit()
 
-def downloadByChrome(hkexConfig):
-    targetUrl = hkexConfig['URL']
-    downloadPath = hkexConfig['DOWNLOAD_PATH']
-    downloadFileName = hkexConfig['listOfSecurities']
-
-    # 1. 取得目前專案執行的絕對路徑
-    current_dir = Path.cwd()
-    print(f"CURRENT DIR: {current_dir}")
-    expected_filepath = os.path.join(str(current_dir), downloadPath)
-    download_filepath = os.path.join(expected_filepath, downloadFileName)
-
-    print(f"DOWNLOAD URL  : {targetUrl}")
-    print(f"DOWNLOAD PATH : {download_filepath}")
-    
+def chromeOptions(expected_filepath):
     # 2. 設定 Chrome 瀏覽器參數
     chrome_options = Options()
     chrome_options.add_argument('--headless=new')  # 💡 隱景運行（不開啟瀏覽器視窗）
@@ -122,9 +107,25 @@ def downloadByChrome(hkexConfig):
         "safebrowsing.enabled": True
     }
     chrome_options.add_experimental_option("prefs", prefs)
+    return chrome_options        
 
+def downloadByChrome(targetUrl, downloadPath):
+    path = urlsplit(targetUrl).path
+    filename = posixpath.basename(path)
+    print(f"filename : {filename}")
+
+    # 1. 取得目前專案執行的絕對路徑
+    current_dir = Path.cwd()
+    print(f"CURRENT DIR: {current_dir}")
+    expected_filepath = os.path.join(str(current_dir), downloadPath)
+    download_filepath = os.path.join(expected_filepath, filename)
+
+    print(f"DOWNLOAD URL  : {targetUrl}")
+    print(f"DOWNLOAD PATH : {download_filepath}")
+    
     # 4. 啟動瀏覽器
     print("正在啟動 Chrome 瀏覽器...")
+    chrome_options = chromeOptions(expected_filepath)
     driver = webdriver.Chrome(options=chrome_options)
     
     try:
@@ -155,7 +156,6 @@ def downloadByChrome(hkexConfig):
         return False
         
     finally:
-        # 6. 務必關閉瀏覽器釋放記憶體
         driver.quit()
 
 if __name__ == "__main__":

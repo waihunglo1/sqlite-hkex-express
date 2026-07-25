@@ -3,11 +3,19 @@ import pandas as pd
 from yahooquery import Ticker
 import configparser
 import sqlite3
+import os
+from pathlib import Path
 
-def tickersFromXls():
+def tickersFromXls(hkexConfig):
+    downloadPath = hkexConfig['DOWNLOAD_PATH']
+    fileName = hkexConfig['listOfSecurities']
+    current_dir = Path.cwd()
+    targetPath = os.path.join(str(current_dir), downloadPath)
+    save_path = os.path.join(targetPath, fileName)
+
     # Define converters to force the first 3 columns (by index 0, 1, 2) to string
     df = pd.read_excel(
-        "/Users/user/Downloads/ListOfSecurities_c.xlsx",
+        save_path,
         skiprows=2,
         usecols=[0, 1, 2],
         converters={0: str, 1: str, 2: str}
@@ -111,7 +119,8 @@ sqliteFile = config['SQLITE']['FILE']
 print(f"SQLITE : {sqliteFile}") 
 
 # read xls
-tickerList = tickersFromXls()
+hkexConfig = config['HKEX']
+tickerList = tickersFromXls(hkexConfig)
 print(f"SIZE : {len(tickerList)}")
 
 # Split ticker_list into batches of 100 items
