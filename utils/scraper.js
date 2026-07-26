@@ -7,7 +7,11 @@ const { FixedWidthParser } = require('fixed-width-parser');
 const { Readable } = require('stream');
 const moment = require('moment');
 const path = require('path');
+const ini = require('ini');
 const sqliteHelper = require('./sqliteHelper.js');
+
+// Read and parse synchronously
+const analystConfig = ini.parse(fs.readFileSync('./config/analyst-data.ini', 'utf-8'));
 
 // local modules
 const config = require('config');
@@ -377,19 +381,19 @@ function convertValue(obj) {
 }
 
 const traverseDir = () => {
-    const pathToLook = config.hkex.download.path;
+    const hkexPath = path.join(process.cwd(), analystConfig.HKEX.DOWNLOAD_PATH);
     const folderTarget = config.file.path.load.dir3;
     const [year, month] = helper.todayYearMonth();
     const targetPath = path.join(path.join(config.file.path.extract, year + month), folderTarget);
     const regex = /^d(\d{6})e\.htm$/; // Example regex for matching files like d250627e.htm
 
-    if (!fs.existsSync(pathToLook)) {
-        console.error("Directory does not exist: " + pathToLook);
+    if (!fs.existsSync(hkexPath)) {
+        console.error("Directory does not exist: " + hkexPath);
         return;
     } else {
-        console.log("Directory exists: " + pathToLook);
+        console.log("Directory exists: " + hkexPath);
         helper.createDirectoryIfNotExists(targetPath).then(async () => {
-            const files = helper.traverseDirectory(pathToLook, regex);
+            const files = helper.traverseDirectory(hkexPath, regex);
             console.log(`Found ${files.length} files to process.`);
             const promises = files.map(file => {
                 const match = regex.exec(file.file);

@@ -13,7 +13,9 @@ const yahooFinance = new YahooFinance({
 
 /**
  * Download HKEX data and fill it with Yahoo Finance data.
- * This function queries the HKEX data, fills it with additional information from Yahoo Finance,
+ * This function queries the HKEX data, fills it with additional information from Yahoo Finance
+ * 
+ * deprecated: use loadDataV2.js instead
  */
 const fillStockData = async (yahooFinance) => {
   console.log("HKEX data enabled: " + config.hkex.enable);
@@ -36,14 +38,16 @@ const fillStockData = async (yahooFinance) => {
 /*
  * main function to execute the data loading and filling process
  */
-
-
-helper.loadIndexDataByYahooFinance(yahooFinance).then(() => {
-  fillStockData(yahooFinance).then(async () => {
-    scraper.traverseDir();
-  }).catch((error) => {
-    console.error("Error loading index data:", error);
-  });
-}).catch((error) => {
-  console.error("Error in the data loading and filling process:", error);
+sqliteHelper.dumpSqliteVerion().then(() => {
+    helper.loadIndexDataByYahooFinance(yahooFinance).then(async () => {
+      try {
+        await scraper.traverseDir();
+        console.log("Data loading and filling process completed successfully.");
+      }
+      catch(error) {
+        console.error("Error in the data loading and filling process:", error);
+      }
+    }).catch((error) => {
+        console.error("Error loading index data:", error);
+    })
 });

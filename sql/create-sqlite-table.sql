@@ -31,6 +31,7 @@ CREATE TABLE IF NOT EXISTS DAILY_STOCK_PRICE
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_daily_stock_price ON DAILY_STOCK_PRICE (symbol, dt);
+create index idx_daily_stoc_price02 on daily_stock_price(dt);
 
 drop table if exists DAILY_STOCK_STATS; 
 
@@ -219,3 +220,13 @@ order by last_updated desc
             and sector = 'Financial Services'
             and dt = '20260717'
                  
+
+select dt from ( 
+            SELECT dt FROM DAILY_STOCK_PRICE 
+            group by dt 
+            order by dt desc 
+            limit 200 
+        ) 
+        except 
+        select dt from daily_stock_stats group by dt
+        ;                 

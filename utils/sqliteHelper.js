@@ -1,15 +1,25 @@
+const fs = require('node:fs');
+const ini = require('ini');
 const { db } = require('@vercel/postgres');
-const config = require('config');
-const sqliteDb = require('better-sqlite3')(config.db.sqlite.file, {});
+// const config = require('config');
 const moment = require('moment');
+const analystConfig = ini.parse(fs.readFileSync('./config/analyst-data.ini', 'utf-8'));
+const sqliteDb = require('better-sqlite3')(analystConfig.SQLITE.FILE, {});
 sqliteDb.pragma('journal_mode = WAL');
 
 /**
  * 
  */
-const dumpSqliteVerion = async () => {
-    const row01 = sqliteDb.prepare('SELECT sqlite_version()').get();
-    console.log(row01);
+async function dumpSqliteVerion () {
+    const row01 = sqliteDb.prepare('SELECT sqlite_version() AS version').get();
+    console.log(`SQLite Version: ${row01.version}`);
+
+    const sqlStmt = sqliteDb.prepare('SELECT name FROM sqlite_master');
+    const schemas = sqlStmt.all();
+        
+    for (const schema of schemas) {
+        console.log(`Object : ${schema.name}`);
+    }
 }
 
 /**
