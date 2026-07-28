@@ -27,9 +27,40 @@ def usTickerFromGit(tickerConfig):
 def yahooHistPriceBatchQuery(tickerList):
     print(f"Requesting data for {len(tickerList)} tickers...")
     tickers_data = Ticker(tickerList, asynchronous=True) 
-    df = tickers_data.history(period='1y', interval='1d')
-    df = df.reset_index()
-    print(df)
+    hist = tickers_data.history(period='1y', interval='1d')
+    hist = hist.reset_index()
+    print(hist)
+
+    if len(hist) > 0:
+        insertOrReplaceHistPrice(hist)
+
+def insertOrReplaceHistPrice(hist):    
+    hist.rename(columns={'symbol': 'ticker'}, inplace=True)
+    required_columns = ['ticker', 'date', 'open', 'high', 'low', 'close', 'adjclose', 'volume']
+    for col in required_columns:
+        if col not in hist.columns:
+            hist[col] = None
+            
+    hist_final = hist[required_columns]
+
+    static_sql = """
+        INSERT OR REPLACE INTO stock_history 
+        (ticker, date, open, high, low, close, adjclose, volume) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    """
+
+    try:
+        with sqlite3.connect(sqliteFile, timeout=10) as conn:
+            cursor = conn.cursor()
+            data_tuples = list(hist_final.itertuples(index=False, name=None))
+            cursor.executemany(static_sql, data_tuples)
+            conn.commit()
+            print(f"✅ 成功將 {len(hist_final)} 筆歷史數據以 100% 靜態安全語法更新至 SQLite 資料庫。")
+    except Exception as e:
+        conn.rollback()
+        print(f"❌ 寫入資料庫時出錯: {e}")
+    finally:
+        conn.close()
 
 def yahooStockInfoBatchQuery(tickerBatch):
     tickers = Ticker(tickerBatch, asynchronous=True)
