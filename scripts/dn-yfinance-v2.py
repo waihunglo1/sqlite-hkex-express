@@ -31,23 +31,6 @@ def tickersFromXls(hkexConfig):
     tickerList = filterDf.iloc[:, 0].tolist()
     return tickerList
 
-def extractFromYFinance(tickerBatch, yfTickers, csvData):
-    # Extract data locally from the pre-fetched tickers object
-    for symbol in tickerBatch:
-        try:
-            info = yfTickers.tickers[symbol].info
-            
-            csvData.append({
-                "Ticker": symbol,
-                "Name": info.get("longName"),
-                "Sector": info.get("sector"),
-                "Market Cap": info.get("marketCap"),
-                "Trailing P/E": info.get("trailingPE"),
-                "Current Price": info.get("currentPrice")
-            })
-        except Exception as e:
-            print(f"Skipping {symbol}: {e}")
-
 def yahooQuery(tickerBatch):
     tickers = Ticker(tickerBatch, country='hong kong')
 

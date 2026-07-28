@@ -7,6 +7,9 @@ import os
 import urllib.request
 from pathlib import Path
 import sys
+from requests.exceptions import HTTPError
+import time
+import random
 
 def usTickerFromGit(tickerConfig):
     # Use the raw URL to get plain text
@@ -36,6 +39,11 @@ def yahooHistPriceBatchQuery(tickerList):
 
 def insertOrReplaceHistPrice(hist):    
     hist.rename(columns={'symbol': 'ticker'}, inplace=True)
+    hist['date'] = (
+        pd.to_datetime(hist['date'], utc=True)
+        .dt.tz_convert('US/Eastern')
+        .dt.strftime('%Y%m%d')
+    )
     required_columns = ['ticker', 'date', 'open', 'high', 'low', 'close', 'adjclose', 'volume']
     for col in required_columns:
         if col not in hist.columns:
@@ -44,9 +52,9 @@ def insertOrReplaceHistPrice(hist):
     hist_final = hist[required_columns]
 
     static_sql = """
-        INSERT OR REPLACE INTO stock_history 
-        (ticker, date, open, high, low, close, adjclose, volume) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT OR REPLACE INTO daily_stock_price 
+        (symbol, period, dt, open, high, low, close, adj_close, volume, open_int) 
+        VALUES (?, 'D', ?, ?, ?, ?, ?, ?, ?, 0)
     """
 
     try:
@@ -62,27 +70,48 @@ def insertOrReplaceHistPrice(hist):
     finally:
         conn.close()
 
-def yahooStockInfoBatchQuery(tickerBatch):
-    tickers = Ticker(tickerBatch, asynchronous=True)
+def yahooStockInfoBatchQueryRetry(tickerBatch):
+    time.sleep(random.uniform(1.0, 3.5))
+    
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            tickers = Ticker(tickerBatch)
+            profile_data = tickers.asset_profile
+            quote = tickers.quotes
 
-    # 1. 獲取數據
-    # Fetch the raw data dictionaries
-    # summary = tickers.summary_detail
-    profile_data = tickers.asset_profile
-    quote = tickers.quotes
-    # print(len(profile_data), len(quote))
-
+            if isinstance(profile_data, dict) and any('error' in str(v).lower() or 'timeout' in str(v).lower() for v in profile_data.values()):
+                raise RuntimeError("偵測到 API 回傳內容包含 504/逾時錯誤資訊")
+                
+            saveStockData(tickerBatch, quote, profile_data)
+        except Exception as e:
+            if attempt < max_retries - 1:
+                wait_time = random.uniform(2.0, 5.0) * (attempt + 1)
+                print(f"發生錯誤: {e}。等待 {wait_time:.2f} 秒後進行第 {attempt + 2} 次重試...")
+                time.sleep(wait_time)
+            else:
+                print(f"已達到最大重試次數，放棄擷取 {tickerBatch}")
+                return None
+            
+def saveStockData(tickerBatch, quote, profile_data):
     records = []
     for symbol in tickerBatch:
         try:
+            # 安全獲取各模組的字典，若無資料則給空字典
+            sym_quote = quote.get(symbol, {}) if isinstance(quote, dict) else {}
+            sym_profile = profile_data.get(symbol, {}) if isinstance(profile_data, dict) else {}
+            
+            # 如果對應的 dictionary 是字串（代表 yahooquery 回傳錯誤訊息），則跳過或視為空
+            if isinstance(sym_quote, str): sym_quote = {}
+            if isinstance(sym_profile, str): sym_profile = {}
+
             records.append({
                 'symbol': symbol,
-                'name'  : quote[symbol]['longName'],
-                'sector': profile_data[symbol]['sector'],
-                'industry': profile_data[symbol]['industry'],
-                'marketCap' : quote[symbol]['marketCap']
+                'name'  : sym_quote.get('shortName') or sym_quote.get('longName') or 'N/A', # quote 通常用 shortName/longName
+                'sector': sym_profile.get('sector', 'N/A'),
+                'industry': sym_profile.get('industry', 'N/A'),
+                'marketCap' : sym_quote.get('marketCap', None) # 從 summary_detail 獲取最安全的市值
             })
-            
         except Exception as e:
             errorRecords.append(
                 {
@@ -143,8 +172,8 @@ errorRecords = []
 batch_size = 100
 for i in range(0, len(tickerList), batch_size):
     tickerBatch = tickerList[i : i + batch_size]
-    yahooHistPriceBatchQuery(tickerBatch)
-    yahooStockInfoBatchQuery(tickerBatch)
+    # yahooHistPriceBatchQuery(tickerBatch)
+    yahooStockInfoBatchQueryRetry(tickerBatch)
 
 if len(errorRecords) > 0:
     df = pd.DataFrame(errorRecords)
