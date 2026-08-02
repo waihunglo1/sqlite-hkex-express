@@ -11,10 +11,9 @@ const ini = require('ini');
 const sqliteHelper = require('./sqliteHelper.js');
 
 // Read and parse synchronously
-const analystConfig = ini.parse(fs.readFileSync('./config/analyst-data.ini', 'utf-8'));
+const analystConfig = ini.parse(fs.readFileSync('./config/analyst-data-hk.ini', 'utf-8'));
 
 // local modules
-const config = require('config');
 const helper = require("./helper");
 const { exit } = require('process');
 
@@ -104,7 +103,7 @@ const salesRecordParser = new FixedWidthParser([
  * @param {*} filePath 
  * @param {*} outputFilePath 
  */
-async function scrapeData(filePath, outputFilePath) {
+async function parseHkexFile(filePath) {
     const buffer = fs.readFileSync(filePath);
     const $ = cheerio.loadBuffer(buffer);
 
@@ -123,7 +122,7 @@ async function scrapeData(filePath, outputFilePath) {
     stringStream.push(fonts.join());
     stringStream.push(null); // Indicate end of stream
 
-    await writeFileAsync(outputFilePath, fonts.join());
+    // await writeFileAsync(outputFilePath, fonts.join());
     // console.log(`File written to ${outputFilePath}`);
     var {quoteDate, prices} = await processLineByLine(stringStream);
     await sqliteHelper.insertDailyStockPrice(prices);
@@ -380,31 +379,28 @@ function convertValue(obj) {
     return obj;
 }
 
-const traverseDir = () => {
+async function traverseDir() {
     const hkexPath = path.join(process.cwd(), analystConfig.HKEX.DOWNLOAD_PATH);
-    const folderTarget = config.file.path.load.dir3;
-    const [year, month] = helper.todayYearMonth();
-    const targetPath = path.join(path.join(config.file.path.extract, year + month), folderTarget);
     const regex = /^d(\d{6})e\.htm$/; // Example regex for matching files like d250627e.htm
 
     if (!fs.existsSync(hkexPath)) {
         console.error("Directory does not exist: " + hkexPath);
-        return;
+        return false;
     } else {
         console.log("Directory exists: " + hkexPath);
-        helper.createDirectoryIfNotExists(targetPath).then(async () => {
-            const files = helper.traverseDirectory(hkexPath, regex);
-            console.log(`Found ${files.length} files to process.`);
-            const promises = files.map(file => {
+        const files = helper.traverseDirectory(hkexPath, regex);
+        console.log(`Found ${files.length} files to process.`);
+        await Promise.all(
+            files.map(async (file) => {
                 const match = regex.exec(file.file);
                 if (match) {
                     const destFile = `d${match[1]}e.txt`;
-                    scrapeData(file.path, path.join(targetPath, destFile));
+                    await parseHkexFile(file.path);
                 }
-            });
+            })
+        );
 
-            const results = await Promise.all(promises);
-        });
+        return true;
     }
 }
 

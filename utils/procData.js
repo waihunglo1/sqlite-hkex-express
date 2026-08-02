@@ -1,11 +1,13 @@
 const taIndicator = require('@debut/indicators');
 const { createTrend } = require('trendline');
 const helper = require("./helper");
-const config = require('config');
 const VolumeProfile = require('technicalindicators').VolumeProfile;
 const simpleStatistics = require('simple-statistics');
+const ini = require('ini');
+const fs = require('fs');
 
-const sqliteDb = require('better-sqlite3')(config.db.sqlite.file, {});
+const analystConfig = ini.parse(fs.readFileSync('./config/analyst-data-hk.ini', 'utf-8'));
+const sqliteDb = require('better-sqlite3')(analystConfig.SQLITE.FILE, {});
 sqliteDb.pragma('journal_mode = WAL');
 
 const queryDate = ''; // = '20260730'
@@ -22,7 +24,7 @@ processDataLocal();
  */
 function processDataLocal() {
     // process data by dates
-    console.log("Start processing data. file path: " + config.db.sqlite.file);
+    console.log("Start processing data. file path: " + analystConfig.SQLITE.FILE);
 
     if(! helper.isEmpty(queryDate) && !helper.isEmpty(querySymbol)) {
         sqliteProcessSingleDate(queryDate, querySymbol);
@@ -34,7 +36,7 @@ function processDataLocal() {
 
     sqliteLocalUpdateMarketStats();
     sqliteLocalUpdateSectorsStats();
-    console.log("Completed processing data. file path: " + config.db.sqlite.file);
+    console.log("Completed processing data. file path: " + analystConfig.SQLITE.FILE);
 }
 
 

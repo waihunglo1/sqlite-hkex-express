@@ -31,7 +31,7 @@ def downloadLastDays(hkexConfig, targetDays):
 # Main program
 #
 config = configparser.ConfigParser()
-config.read('config/analyst-data.ini', encoding='utf-8')
+config.read('config/analyst-data-hk.ini', encoding='utf-8')
 hkexConfig = config['HKEX']
 logging.info(f"hkexConfig : {hkexConfig}") 
 

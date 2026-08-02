@@ -127,7 +127,7 @@ def yahooQueryStockInfoToSqlite(tickerList):
 
 # Initialize the parser
 config = configparser.ConfigParser()
-config.read('config/analyst-data.ini', encoding='utf-8')
+config.read('config/analyst-data-hk.ini', encoding='utf-8')
 sqliteFile = config['SQLITE']['FILE']
 logging.info(f"SQLITE : {sqliteFile}") 
 

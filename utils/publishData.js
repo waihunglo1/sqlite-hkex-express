@@ -1,7 +1,9 @@
 const helper = require("./helper");
-const config = require('config');
 const avienDbHelper = require('./pgDbConnHelper.js');
-const sqliteDb = require('better-sqlite3')(config.db.sqlite.file, {});
+const ini = require('ini');
+const fs = require('fs');
+const analystConfig = ini.parse(fs.readFileSync('./config/analyst-data-hk.ini', 'utf-8'));
+const sqliteDb = require('better-sqlite3')(analystConfig.SQLITE.FILE, {});
 sqliteDb.pragma('journal_mode = WAL');
 
 populateStatisticsToAvien();
