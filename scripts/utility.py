@@ -9,6 +9,7 @@ from pathlib import Path
 import posixpath
 from urllib.parse import urlsplit
 import logging
+import pandas as pd
 
 # Define the number of days for the cutoff
 days_cutoff = 6
@@ -158,6 +159,12 @@ def downloadByChrome(targetUrl, downloadPath):
         
     finally:
         driver.quit()
+
+def dumpErrorRecord(title, records):
+    if len(records) > 0:
+        df = pd.DataFrame(records)
+        logging.info(f"Error Record : {title}")
+        logging.info("\n" + df.to_markdown(index=False).lstrip())          
 
 if __name__ == "__main__":
     logging.info("This is a different version of the module.py file.")    

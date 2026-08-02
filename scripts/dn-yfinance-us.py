@@ -12,6 +12,8 @@ import time
 import random
 import math
 import logging
+import sqliteutility as sqliteUtil
+import utility as util
 
 # 1. 設定日誌格式：包含 [時間] [層級] 檔案名稱:行數 - 訊息
 logging.basicConfig(
@@ -34,19 +36,48 @@ def usTickerFromGitAte329():
     else: 
         dfToGet = df
     
-    rowUpdated = insertOrReplace(dfToGet)        
-    logging.info(f"Row updated : {rowUpdated}")
-    return df
+    rowUpdated = sqliteUtil.insertOrReplaceStockInfo(sqliteFile, dfToGet)        
+    logging.info(f"Stock Info rows updated : {rowUpdated}")
 
-def yahooHistPriceBatchQuery(tickerList):
-    logging.info(f"Requesting data for {len(tickerList)} tickers...")
-    tickers_data = Ticker(tickerList, asynchronous=True) 
-    hist = tickers_data.history(period='1y', interval='1d')
-    hist = hist.reset_index()
-    logging.info(hist)
+def yahooHistPriceBatchQuery():
+    tickers_list = sqliteUtil.fetchTickers(sqliteFile, "1 = 1")
+    total_tickers = len(tickers_list)
+    logging.info(f"No of Tickers to load from yahoo : {total_tickers}")
 
-    if len(hist) > 0:
-        insertOrReplaceHistPrice(hist)
+    updatedCount = 0
+    errorRecords = []
+
+    for i in range(0, total_tickers, batch_size):
+        batch = tickers_list[i : i + batch_size]
+        updatedCount += fillHistPriceByYahooQuery(batch, errorRecords)
+        logging.info(f"正在處理第 {i//batch_size + 1} 批 / 共 {math.ceil(total_tickers/batch_size)} 批 / Update : {updatedCount} / Error : {len(errorRecords)}")
+
+    util.dumpErrorRecord("Yahoo Histical Price", errorRecords)    
+
+def fillHistPriceByYahooQuery(tickerList, errorRecords):
+    updatedCount = 0
+
+    try:
+        logging.info(f"Requesting data for {len(tickerList)} tickers...")
+        tickers_data = Ticker(tickerList, asynchronous=True) 
+        hist = tickers_data.history(period='2y', interval='1d')
+        hist = hist.reset_index()
+        # logging.info(hist)
+
+        if len(hist) > 0:
+            updatedCount = insertOrReplaceHistPrice(hist)
+    except Exception as e:
+        logging.error(e)
+        errorRecords.append(
+            {
+                'symbols': tickerList,
+                'error' : e
+            }
+        )
+
+    sleep = random.uniform(1, 10)
+    time.sleep(sleep)
+    return updatedCount 
 
 def insertOrReplaceHistPrice(hist):    
     hist.rename(columns={'symbol': 'ticker'}, inplace=True)
@@ -74,31 +105,16 @@ def insertOrReplaceHistPrice(hist):
             cursor.executemany(static_sql, data_tuples)
             conn.commit()
             logging.info(f"✅ 成功將 {len(hist_final)} 筆歷史數據以 100% 靜態安全語法更新至 SQLite 資料庫。")
+
+            return len(data_tuples)
     except Exception as e:
         conn.rollback()
         logging.error(f"❌ 寫入資料庫時出錯: {e}")
 
-def fetchTickersWithoutSubIndustry():
-    try:
-        with sqlite3.connect(sqliteFile, timeout=10) as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT symbol FROM stock WHERE (industry is null or industry = '') order by symbol")
+    return 0
 
-            # 4. Retrieve and print the results
-            symbols = [row[0] for row in cursor.fetchall()]
-
-            if not symbols:
-                logging.info("沒有需要更新的股票。")
-            return symbols
-    except sqlite3.Error as e:
-        logging.error(f"❌ ⚫ 其他 SQLite 錯誤: {e}")
-        sys.exit()
-    except Exception as e:
-        logging.error(f"❌ ⚪ 未知錯誤: {e}")
-        sys.exit()      
-
-def yahooStockInfoBatchQueryRetry(df):
-    tickers_list = fetchTickersWithoutSubIndustry()
+def yahooStockInfoBatchQueryRetry():
+    tickers_list = sqliteUtil.fetchTickers(sqliteFile, "(industry is null or industry = '')")
     total_tickers = len(tickers_list)
     logging.info(f"No of Tickers to load from yahoo : {total_tickers}")
 
@@ -108,7 +124,7 @@ def yahooStockInfoBatchQueryRetry(df):
     for i in range(0, total_tickers, batch_size):
         batch = tickers_list[i : i + batch_size]
         logging.info(f"正在處理第 {i//batch_size + 1} 批 / 共 {math.ceil(total_tickers/batch_size)} 批 / Error {len(errorRecords)}")
-        yahooQuerySectorIndustry(batch, updateRecords, errorRecords)
+        fillSectorIndustryByYahooQuery(batch, updateRecords, errorRecords)
 
     # 3. 將結果對照回原本的 DataFrame
     if updateRecords:
@@ -128,9 +144,9 @@ def yahooStockInfoBatchQueryRetry(df):
             logging.error(f"❌ ⚪ 未知錯誤: {e}")
             sys.exit()
       
-    dumpErrorRecord("Yahoo Sector / industry Query", errorRecords)
+    util.dumpErrorRecord("Yahoo Sector / industry Query", errorRecords)
 
-def yahooQuerySectorIndustry(tickers, updateRecords, errorRecords):
+def fillSectorIndustryByYahooQuery(tickers, updateRecords, errorRecords):
     t = Ticker(tickers, asynchronous=True)  # 啟用非同步加速
     profile = t.asset_profile
 
@@ -154,41 +170,6 @@ def yahooQuerySectorIndustry(tickers, updateRecords, errorRecords):
     logging.info(f"Update Records : {len(updateRecords)} / Error Records : {len(errorRecords)} / sleep : {sleep:.2f}")
     time.sleep(sleep)
 
-def insertOrReplace(df):
-    df["symbol"] = df["symbol"].str.replace("/", "-", regex=False)
-    updated = 0
-    try:
-        with sqlite3.connect(sqliteFile, timeout=10) as conn:
-            cursor = conn.cursor()
-        
-            # Use SQLite "INSERT OR REPLACE" logic row-by-row
-            for _, row in df.iterrows():
-                cursor.execute('''
-                    INSERT INTO STOCK (symbol, name, sector, market_cap) 
-                    VALUES (?, ?, ?, ?)
-                    ON CONFLICT(symbol) DO UPDATE SET
-                        name = EXCLUDED.name,
-                        sector = EXCLUDED.sector,
-                        market_cap = EXCLUDED.market_cap
-                ''', (row['symbol'], row['name'], row['industry'], row['marketCap']))
-                updated += cursor.rowcount
-            
-            conn.commit()
-    except sqlite3.Error as e:
-        logging.error(f"❌ ⚫ 其他 SQLite 錯誤: {e}")
-        sys.exit()
-    except Exception as e:
-        logging.error(f"❌ ⚪ 未知錯誤: {e}")
-        sys.exit()
-
-    return updated
-
-def dumpErrorRecord(title, records):
-    if len(records) > 0:
-        df = pd.DataFrame(records)
-        logging.info(f"Error Record : {title}")
-        logging.info("\n" + df.to_markdown(index=False).lstrip())  
-
 #
 # Main Program
 # 
@@ -201,6 +182,7 @@ logging.info(f"SQLITE : {sqliteFile}")
 
 # read xls
 tickerConfig = config['TICKERS']
-tickerList = usTickerFromGitAte329()
-yahooStockInfoBatchQueryRetry(tickerList)
+usTickerFromGitAte329()
+# yahooStockInfoBatchQueryRetry()
+yahooHistPriceBatchQuery()
 
