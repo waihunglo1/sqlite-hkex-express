@@ -8,13 +8,15 @@
     "download": "node utils/download.js",
     "start": "node api/index.ts",
     "load": "node utils/loadData.js",
-    "loadv2": "node --env-file=.env.local  utils/loadDataV2.js",
+    "loadv2": "node --env-file=.env.local utils/loadDataV2.js",
     "process": "node --env-file=.env.local utils/procData.js",
     "publish": "node --env-file=.env.local utils/publishData.js",
     "lpv1": "node utils/loadData.js && node --env-file=.env.local utils/procData.js && node --env-file=.env.local utils/publishData.js",
     "lpv2": "node --env-file=.env.local utils/loadDataV2.js && node --env-file=.env.local utils/procData.js && node --env-file=.env.local utils/publishData.js",
     "dev": "node --env-file=.env.local api/index.ts",
-    "scrap": "node utils/scraper.js"
+    "scrap": "node utils/scraper.js",
+    "process-us": "node --env-file=.env.us utils/procData.js",
+    "publish-us": "node --env-file=.env.us utils/publishData.js"
   },
   "keywords": [],
   "author": "",

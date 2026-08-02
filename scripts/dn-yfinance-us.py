@@ -83,7 +83,6 @@ def insertOrReplaceHistPrice(hist):
     hist.rename(columns={'symbol': 'ticker'}, inplace=True)
     hist['date'] = (
         pd.to_datetime(hist['date'], utc=True)
-        .dt.tz_convert('US/Eastern')
         .dt.strftime('%Y%m%d')
     )
     required_columns = ['ticker', 'date', 'open', 'high', 'low', 'close', 'adjclose', 'volume']
