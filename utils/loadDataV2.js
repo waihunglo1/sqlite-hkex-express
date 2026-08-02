@@ -1,4 +1,5 @@
 // Import helper functions and utilities
+require('dotenv').config();
 const helper = require("./helper.js");
 const sqliteHelper = require('./sqliteHelper.js');
 const scraper = require('./scraper.js'); // Import the traverseDir function

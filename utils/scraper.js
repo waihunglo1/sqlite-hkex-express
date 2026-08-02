@@ -1,3 +1,7 @@
+require('dotenv').config();
+const { ANALYST_DATA_INI } = process.env;
+console.log("ANALYST_DATA_INI = ", ANALYST_DATA_INI);
+
 const axios = require('axios');
 const cheerio = require('cheerio');
 const https = require('https');
@@ -11,7 +15,7 @@ const ini = require('ini');
 const sqliteHelper = require('./sqliteHelper.js');
 
 // Read and parse synchronously
-const analystConfig = ini.parse(fs.readFileSync('./config/analyst-data-hk.ini', 'utf-8'));
+const analystConfig = ini.parse(fs.readFileSync(ANALYST_DATA_INI, 'utf-8'));
 
 // local modules
 const helper = require("./helper");

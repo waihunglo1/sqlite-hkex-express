@@ -1,8 +1,11 @@
+require('dotenv').config();
+const { ANALYST_DATA_INI } = process.env;
+
 const fs = require('node:fs');
 const ini = require('ini');
 const { db } = require('@vercel/postgres');
 const moment = require('moment');
-const analystConfig = ini.parse(fs.readFileSync('./config/analyst-data-hk.ini', 'utf-8'));
+const analystConfig = ini.parse(fs.readFileSync(ANALYST_DATA_INI, 'utf-8'));
 const sqliteDb = require('better-sqlite3')(analystConfig.SQLITE.FILE, {});
 sqliteDb.pragma('journal_mode = WAL');
 
