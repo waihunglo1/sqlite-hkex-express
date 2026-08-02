@@ -8,8 +8,8 @@ const simpleStatistics = require('simple-statistics');
 const sqliteDb = require('better-sqlite3')(config.db.sqlite.file, {});
 sqliteDb.pragma('journal_mode = WAL');
 
-const queryDate = ''; //20250516
-const querySymbol = '';// = '9992.HK';
+const queryDate = ''; // = '20260730'
+const querySymbol = '' // '2697.HK';
 
 /**
  * Main entry point for processing data
@@ -542,6 +542,7 @@ function calculateSMASlope(priceHistory, priceStats, priceStatsHistory, smaPerio
     const dataForSlope = sma20Data.reverse().map((data, index) => [index , data[1]]);
 
     // console.log("smaData: " + JSON.stringify(sma20Data));
+    // console.log("smaData: " + dataForSlope);
 
     const slope = simpleStatistics.linearRegression(dataForSlope).m; 
 

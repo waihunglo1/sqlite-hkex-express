@@ -5,6 +5,17 @@ import configparser
 import sqlite3
 import os
 from pathlib import Path
+import logging
+import time
+import random
+import math
+
+# 1. 設定日誌格式：包含 [時間] [層級] 檔案名稱:行數 - 訊息
+logging.basicConfig(
+    level=logging.INFO,  # 設定最低捕捉層級
+    format='%(asctime)s [%(levelname)s] %(filename)s:%(lineno)04d - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'  # 精簡時間格式
+)
 
 def tickersFromXls(hkexConfig):
     downloadPath = hkexConfig['DOWNLOAD_PATH']
@@ -31,7 +42,7 @@ def tickersFromXls(hkexConfig):
     tickerList = filterDf.iloc[:, 0].tolist()
     return tickerList
 
-def yahooQuery(tickerBatch):
+def yahooQuery(tickerBatch, errorRecords):
     tickers = Ticker(tickerBatch, country='hong kong')
 
     # 1. 獲取數據
@@ -39,35 +50,39 @@ def yahooQuery(tickerBatch):
     # summary = tickers.summary_detail
     profile_data = tickers.asset_profile
     quote = tickers.quotes
-    # print(len(profile_data), len(quote))
+    # logging.info(len(profile_data), len(quote))
 
     records = []
     for symbol in tickerBatch:
         try:
             records.append({
                 'symbol': symbol,
-                'name'  : quote[symbol]['longName'],
-                'sector': profile_data[symbol]['sector'],
-                'industry': profile_data[symbol]['industry'],
-                'marketCap' : quote[symbol]['marketCap']
+                'name'  : quote[symbol].get("longName","NONE"),
+                'sector': profile_data[symbol].get("sector","NONE"),
+                'industry': profile_data[symbol].get("industry","NONE"),
+                'marketCap' : quote[symbol].get("marketCap","NONE")
             })
-            
-        except:
+        except Exception as e:
+            # logging.error(f"❌ [{symbol}] 未知錯誤: {e} / {profile[symbol]}")
             errorRecords.append(
                 {
-                    'symbol': symbol
+                    'symbol': symbol,
+                    'error' : e,
+                    'message' : profile_data[symbol]
                 }
             )
-            # print(f"{symbol}: 無法獲取資料")
 
     # update sqlite
     if len(records) > 0:
         updated = insertOrReplace(records)
-        print(f"Changed Row: {updated} data size: {len(records)}")
+        # logging.info(f"Changed Row: {updated} data size: {len(records)}")
+        return updated
+
+    return 0
 
 def insertOrReplace(records):
     df = pd.DataFrame(records)
-    print(df.to_markdown(index=False))
+    # logging.info("\n" + df.to_markdown(index=False).rstrip)
 
     updated = 0
     try:
@@ -84,13 +99,28 @@ def insertOrReplace(records):
             
             conn.commit()
     except sqlite3.Error as e:
-        print(f"❌ ⚫ 其他 SQLite 錯誤: {e}")
+        logging.error(f"❌ ⚫ 其他 SQLite 錯誤: {e}")
         exit
     except Exception as e:
-        print(f"❌ ⚪ 未知錯誤: {e}")
+        logging.error(f"❌ ⚪ 未知錯誤: {e}")
         exit
 
     return updated
+
+def yahooQueryStockInfoToSqlite(tickerList):
+    # Split ticker_list into batches of 100 items
+    errorRecords = []
+    batch_size = 100
+    updated = 0
+    for i in range(0, len(tickerList), batch_size):
+        tickerBatch = tickerList[i : i + batch_size]
+        updated += yahooQuery(tickerBatch,errorRecords)
+        sleep = random.uniform(1, 10)
+        logging.info(f"Updated : {updated} / {len(tickerList)} / Error Records : {len(errorRecords)} / sleep : {sleep:.2f}")
+        time.sleep(sleep)
+
+    return errorRecords
+
 #
 # Main Program
 # 
@@ -99,20 +129,15 @@ def insertOrReplace(records):
 config = configparser.ConfigParser()
 config.read('config/analyst-data.ini', encoding='utf-8')
 sqliteFile = config['SQLITE']['FILE']
-print(f"SQLITE : {sqliteFile}") 
+logging.info(f"SQLITE : {sqliteFile}") 
 
 # read xls
 hkexConfig = config['HKEX']
 tickerList = tickersFromXls(hkexConfig)
-print(f"SIZE : {len(tickerList)}")
+logging.info(f"SIZE : {len(tickerList)}")
 
-# Split ticker_list into batches of 100 items
-errorRecords = []
-batch_size = 100
-for i in range(0, len(tickerList), batch_size):
-    tickerBatch = tickerList[i : i + batch_size]
-    yahooQuery(tickerBatch)
-
+# Split ticker_list into batches of items
+errorRecords = yahooQueryStockInfoToSqlite(tickerList)
 if len(errorRecords) > 0:
     df = pd.DataFrame(errorRecords)
-    print(df.to_markdown(index=False))  
+    logging.info("\n" + df.to_markdown(index=False).strip())  

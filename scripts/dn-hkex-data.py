@@ -3,6 +3,17 @@ import os
 import utility as util
 from datetime import date, timedelta
 import configparser
+import logging
+import time
+import random
+import math
+
+# 1. 設定日誌格式：包含 [時間] [層級] 檔案名稱:行數 - 訊息
+logging.basicConfig(
+    level=logging.INFO,  # 設定最低捕捉層級
+    format='%(asctime)s [%(levelname)s] %(filename)s:%(lineno)04d - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'  # 精簡時間格式
+)
 
 def downloadLastDays(hkexConfig, targetDays):
   # Get today's date
@@ -22,7 +33,7 @@ def downloadLastDays(hkexConfig, targetDays):
 config = configparser.ConfigParser()
 config.read('config/analyst-data.ini', encoding='utf-8')
 hkexConfig = config['HKEX']
-print(f"hkexConfig : {hkexConfig}") 
+logging.info(f"hkexConfig : {hkexConfig}") 
 
 # download hkex stock list
 targetUrl = hkexConfig['URL']

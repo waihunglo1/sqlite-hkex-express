@@ -8,6 +8,7 @@ import time
 from pathlib import Path
 import posixpath
 from urllib.parse import urlsplit
+import logging
 
 # Define the number of days for the cutoff
 days_cutoff = 6
@@ -30,16 +31,16 @@ def removeHistorialFiles(hkexConfig):
         if os.path.isfile(file_path):
             # Get the file's last modification time
             file_mtime = os.path.getmtime(file_path)
-            print(f"Examine File: {filename} (Modified date: {datetime.datetime.fromtimestamp(file_mtime).strftime('%Y-%m-%d')})")
+            logging.info(f"Examine File: {filename} (Modified date: {datetime.datetime.fromtimestamp(file_mtime).strftime('%Y-%m-%d')})")
 
             # Compare the file's modification time with the cutoff timestamp
             if file_mtime < cutoff_timestamp:
                 try:
                     # Delete the file
                     os.remove(file_path)
-                    print(f"Deleted: {filename} (Modified date: {datetime.datetime.fromtimestamp(file_mtime).strftime('%Y-%m-%d')})")
+                    logging.info(f"Deleted: {filename} (Modified date: {datetime.datetime.fromtimestamp(file_mtime).strftime('%Y-%m-%d')})")
                 except OSError as e:
-                    print(f"Error deleting file {filename}: {e}")
+                    logging.info(f"Error deleting file {filename}: {e}")
 
         # Optional: If you also want to remove empty directories or older directories recursively, 
         # you might consider using os.walk and shutil.rmtree for a more robust solution, 
@@ -57,7 +58,7 @@ def downloadHtm(hkexConfig, fileName):
     save_path = os.path.join(targetPath, fileName)
 
     if os.path.isfile(save_path):
-        print("file existed:" + save_path + " [download abort]")
+        logging.info("file existed:" + save_path + " [download abort]")
         return
 
     # Automatically manages the browser driver (e.g., ChromeDriver, FirefoxDriver)
@@ -68,7 +69,7 @@ def downloadHtm(hkexConfig, fileName):
     try:
         # Navigate to a website
         url = "https://www.hkex.com.hk/eng/stat/smstat/dayquot/" + fileName
-        print("assessing : " + url)
+        logging.info("assessing : " + url)
         driver.get(url)
         time.sleep(3)
 
@@ -79,10 +80,10 @@ def downloadHtm(hkexConfig, fileName):
             
         # Assert that the page title contains "Python"
         assert "Hong Kong Exchanges and Clearing Limited" in driver.title, "Can't download valid file : " + fileName
-        print(f"Successfully saved HTML to: {save_path}")
+        logging.info(f"Successfully saved HTML to: {save_path}")
 
     except AssertionError as e:
-        print(e)
+        logging.error(e)
         os.remove(save_path)
 
     finally:
@@ -112,19 +113,19 @@ def chromeOptions(expected_filepath):
 def downloadByChrome(targetUrl, downloadPath):
     path = urlsplit(targetUrl).path
     filename = posixpath.basename(path)
-    print(f"filename : {filename}")
+    logging.info(f"filename : {filename}")
 
     # 1. 取得目前專案執行的絕對路徑
     current_dir = Path.cwd()
-    print(f"CURRENT DIR: {current_dir}")
+    logging.info(f"CURRENT DIR: {current_dir}")
     expected_filepath = os.path.join(str(current_dir), downloadPath)
     download_filepath = os.path.join(expected_filepath, filename)
 
-    print(f"DOWNLOAD URL  : {targetUrl}")
-    print(f"DOWNLOAD PATH : {download_filepath}")
+    logging.info(f"DOWNLOAD URL  : {targetUrl}")
+    logging.info(f"DOWNLOAD PATH : {download_filepath}")
     
     # 4. 啟動瀏覽器
-    print("正在啟動 Chrome 瀏覽器...")
+    logging.info("正在啟動 Chrome 瀏覽器...")
     chrome_options = chromeOptions(expected_filepath)
     driver = webdriver.Chrome(options=chrome_options)
     
@@ -133,30 +134,30 @@ def downloadByChrome(targetUrl, downloadPath):
         if os.path.exists(download_filepath):
             os.remove(download_filepath)
             
-        print("正在導向港交所下載網址...")
+        logging.info("正在導向港交所下載網址...")
         driver.get(targetUrl)
         
         # 5. 等待下載完成 (Selenium 不會等檔案下載完才結束程式，需要用迴圈監聽檔案是否存在)
-        print("正在下載檔案，請稍候...")
+        logging.info("正在下載檔案，請稍候...")
         timeout = 30  # 最多等 30 秒
         start_time = time.time()
         
         while time.time() - start_time < timeout:
             # 如果目錄下出現該 Excel 檔案，且不是 Chrome 的下載暫存檔 (.crdownload)
             if os.path.exists(download_filepath) and not os.path.exists(download_filepath + ".crdownload"):
-                print(f"✅ 下載成功！檔案已儲存至: {download_filepath}")
+                logging.info(f"✅ 下載成功！檔案已儲存至: {download_filepath}")
                 return True
             time.sleep(1)
             
-        print("❌ 下載超時，未能成功獲取檔案。")
+        logging.info("❌ 下載超時，未能成功獲取檔案。")
         return False
         
     except Exception as e:
-        print(f"❌ 執行過程中發生錯誤: {e}")
+        logging.info(f"❌ 執行過程中發生錯誤: {e}")
         return False
         
     finally:
         driver.quit()
 
 if __name__ == "__main__":
-    print("This is a different version of the module.py file.")    
+    logging.info("This is a different version of the module.py file.")    

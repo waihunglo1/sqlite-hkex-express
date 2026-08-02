@@ -10,29 +10,40 @@ import sys
 from requests.exceptions import HTTPError
 import time
 import random
+import math
+import logging
 
-def usTickerFromGit(tickerConfig):
-    # Use the raw URL to get plain text
-    url = "https://raw.githubusercontent.com/rreichel3/US-Stock-Symbols/main/all/all_tickers.txt"
+# 1. 設定日誌格式：包含 [時間] [層級] 檔案名稱:行數 - 訊息
+logging.basicConfig(
+    level=logging.INFO,  # 設定最低捕捉層級
+    format='%(asctime)s [%(levelname)s] %(filename)s:%(lineno)04d - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'  # 精簡時間格式
+)
 
-    try:
-        with urllib.request.urlopen(url) as response:
-            # Read, decode bytes to string, and split by newline
-            tickers = response.read().decode('utf-8').splitlines()
-            print(f"Successfully fetched {len(tickers)} tickers.")
+# config
+total_size = 0
+batch_size = 50
 
-    except Exception as e:
-        print(f"Failed to download file: {e}")
+def usTickerFromGitAte329():
+    df = pd.read_csv(
+        "https://raw.githubusercontent.com/Ate329/top-us-stock-tickers/main/tickers/all.csv"
+    )
 
-    return tickers
-
+    if total_size > 0:
+        dfToGet = df.head(total_size)
+    else: 
+        dfToGet = df
+    
+    rowUpdated = insertOrReplace(dfToGet)        
+    logging.info(f"Row updated : {rowUpdated}")
+    return df
 
 def yahooHistPriceBatchQuery(tickerList):
-    print(f"Requesting data for {len(tickerList)} tickers...")
+    logging.info(f"Requesting data for {len(tickerList)} tickers...")
     tickers_data = Ticker(tickerList, asynchronous=True) 
     hist = tickers_data.history(period='1y', interval='1d')
     hist = hist.reset_index()
-    print(hist)
+    logging.info(hist)
 
     if len(hist) > 0:
         insertOrReplaceHistPrice(hist)
@@ -56,80 +67,95 @@ def insertOrReplaceHistPrice(hist):
         (symbol, period, dt, open, high, low, close, adj_close, volume, open_int) 
         VALUES (?, 'D', ?, ?, ?, ?, ?, ?, ?, 0)
     """
-
     try:
         with sqlite3.connect(sqliteFile, timeout=10) as conn:
             cursor = conn.cursor()
             data_tuples = list(hist_final.itertuples(index=False, name=None))
             cursor.executemany(static_sql, data_tuples)
             conn.commit()
-            print(f"✅ 成功將 {len(hist_final)} 筆歷史數據以 100% 靜態安全語法更新至 SQLite 資料庫。")
+            logging.info(f"✅ 成功將 {len(hist_final)} 筆歷史數據以 100% 靜態安全語法更新至 SQLite 資料庫。")
     except Exception as e:
         conn.rollback()
-        print(f"❌ 寫入資料庫時出錯: {e}")
-    finally:
-        conn.close()
+        logging.error(f"❌ 寫入資料庫時出錯: {e}")
 
-def yahooStockInfoBatchQueryRetry(tickerBatch):
-    time.sleep(random.uniform(1.0, 3.5))
-    
-    max_retries = 3
-    for attempt in range(max_retries):
+def fetchTickersWithoutSubIndustry():
+    try:
+        with sqlite3.connect(sqliteFile, timeout=10) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT symbol FROM stock WHERE (industry is null or industry = '') order by symbol")
+
+            # 4. Retrieve and print the results
+            symbols = [row[0] for row in cursor.fetchall()]
+
+            if not symbols:
+                logging.info("沒有需要更新的股票。")
+            return symbols
+    except sqlite3.Error as e:
+        logging.error(f"❌ ⚫ 其他 SQLite 錯誤: {e}")
+        sys.exit()
+    except Exception as e:
+        logging.error(f"❌ ⚪ 未知錯誤: {e}")
+        sys.exit()      
+
+def yahooStockInfoBatchQueryRetry(df):
+    tickers_list = fetchTickersWithoutSubIndustry()
+    total_tickers = len(tickers_list)
+    logging.info(f"No of Tickers to load from yahoo : {total_tickers}")
+
+    updateRecords = []
+    errorRecords = []
+
+    for i in range(0, total_tickers, batch_size):
+        batch = tickers_list[i : i + batch_size]
+        logging.info(f"正在處理第 {i//batch_size + 1} 批 / 共 {math.ceil(total_tickers/batch_size)} 批 / Error {len(errorRecords)}")
+        yahooQuerySectorIndustry(batch, updateRecords, errorRecords)
+
+    # 3. 將結果對照回原本的 DataFrame
+    if updateRecords:
         try:
-            tickers = Ticker(tickerBatch)
-            profile_data = tickers.asset_profile
-            quote = tickers.quotes
-
-            if isinstance(profile_data, dict) and any('error' in str(v).lower() or 'timeout' in str(v).lower() for v in profile_data.values()):
-                raise RuntimeError("偵測到 API 回傳內容包含 504/逾時錯誤資訊")
-                
-            saveStockData(tickerBatch, quote, profile_data)
+            with sqlite3.connect(sqliteFile, timeout=10) as conn:
+                cursor = conn.cursor()
+                cursor.executemany(
+                    'UPDATE STOCK SET sector = ?, industry = ? WHERE symbol = ?', 
+                    updateRecords
+                )
+                conn.commit()  # 提交當前批次的更新
+                logging.info(f"成功更新 {len(updateRecords)} 筆股票的產業資訊。")
+        except sqlite3.Error as e:
+            logging.error(f"❌ ⚫ 其他 SQLite 錯誤: {e}")
+            sys.exit()
         except Exception as e:
-            if attempt < max_retries - 1:
-                wait_time = random.uniform(2.0, 5.0) * (attempt + 1)
-                print(f"發生錯誤: {e}。等待 {wait_time:.2f} 秒後進行第 {attempt + 2} 次重試...")
-                time.sleep(wait_time)
-            else:
-                print(f"已達到最大重試次數，放棄擷取 {tickerBatch}")
-                return None
-            
-def saveStockData(tickerBatch, quote, profile_data):
-    records = []
-    for symbol in tickerBatch:
+            logging.error(f"❌ ⚪ 未知錯誤: {e}")
+            sys.exit()
+      
+    dumpErrorRecord("Yahoo Sector / industry Query", errorRecords)
+
+def yahooQuerySectorIndustry(tickers, updateRecords, errorRecords):
+    t = Ticker(tickers, asynchronous=True)  # 啟用非同步加速
+    profile = t.asset_profile
+
+    for symbol in tickers:
         try:
-            # 安全獲取各模組的字典，若無資料則給空字典
-            sym_quote = quote.get(symbol, {}) if isinstance(quote, dict) else {}
-            sym_profile = profile_data.get(symbol, {}) if isinstance(profile_data, dict) else {}
-            
-            # 如果對應的 dictionary 是字串（代表 yahooquery 回傳錯誤訊息），則跳過或視為空
-            if isinstance(sym_quote, str): sym_quote = {}
-            if isinstance(sym_profile, str): sym_profile = {}
-
-            records.append({
-                'symbol': symbol,
-                'name'  : sym_quote.get('shortName') or sym_quote.get('longName') or 'N/A', # quote 通常用 shortName/longName
-                'sector': sym_profile.get('sector', 'N/A'),
-                'industry': sym_profile.get('industry', 'N/A'),
-                'marketCap' : sym_quote.get('marketCap', None) # 從 summary_detail 獲取最安全的市值
-            })
+            sector = profile[symbol].get("sector", "NONE")
+            industry = profile[symbol].get("industry", "NONE")
+            updateRecords.append((sector, industry, symbol))
         except Exception as e:
+            # logging.error(f"❌ [{symbol}] 未知錯誤: {e} / {profile[symbol]}")
             errorRecords.append(
                 {
                     'symbol': symbol,
-                    'exception' : e
+                    'error' : e,
+                    'message' : profile[symbol]
                 }
             )
-            # print(f"{symbol}: 無法獲取資料")
-     
-    # update sqlite
-    if len(records) > 0:
-        updated = insertOrReplace(records)
-        print(f"Changed Row: {updated} data size: {len(records)}")
+            # print(f"{symbol}: 無法獲取資料")    
 
-def insertOrReplace(records,):
-    df = pd.DataFrame(records)
-    print(df)
+    sleep = random.uniform(1, 10)
+    logging.info(f"Update Records : {len(updateRecords)} / Error Records : {len(errorRecords)} / sleep : {sleep:.2f}")
+    time.sleep(sleep)
 
+def insertOrReplace(df):
+    df["symbol"] = df["symbol"].str.replace("/", "-", regex=False)
     updated = 0
     try:
         with sqlite3.connect(sqliteFile, timeout=10) as conn:
@@ -138,20 +164,31 @@ def insertOrReplace(records,):
             # Use SQLite "INSERT OR REPLACE" logic row-by-row
             for _, row in df.iterrows():
                 cursor.execute('''
-                    REPLACE INTO STOCK (symbol,name,industry,sector,market_cap) VALUES (?, ?, ?, ?, ?)
-                ''', (row['symbol'], row['name'], row['industry'], row['sector'], row['marketCap']))
-                # 📜 獲取受影響的行數
+                    INSERT INTO STOCK (symbol, name, sector, market_cap) 
+                    VALUES (?, ?, ?, ?)
+                    ON CONFLICT(symbol) DO UPDATE SET
+                        name = EXCLUDED.name,
+                        sector = EXCLUDED.sector,
+                        market_cap = EXCLUDED.market_cap
+                ''', (row['symbol'], row['name'], row['industry'], row['marketCap']))
                 updated += cursor.rowcount
             
             conn.commit()
     except sqlite3.Error as e:
-        print(f"❌ ⚫ 其他 SQLite 錯誤: {e}")
-        exit
+        logging.error(f"❌ ⚫ 其他 SQLite 錯誤: {e}")
+        sys.exit()
     except Exception as e:
-        print(f"❌ ⚪ 未知錯誤: {e}")
-        exit
+        logging.error(f"❌ ⚪ 未知錯誤: {e}")
+        sys.exit()
 
     return updated
+
+def dumpErrorRecord(title, records):
+    if len(records) > 0:
+        df = pd.DataFrame(records)
+        logging.info(f"Error Record : {title}")
+        logging.info("\n" + df.to_markdown(index=False).lstrip())  
+
 #
 # Main Program
 # 
@@ -160,21 +197,10 @@ def insertOrReplace(records,):
 config = configparser.ConfigParser()
 config.read('config/analyst-data-us.ini', encoding='utf-8')
 sqliteFile = config['SQLITE']['FILE']
-print(f"SQLITE : {sqliteFile}") 
+logging.info(f"SQLITE : {sqliteFile}") 
 
 # read xls
 tickerConfig = config['TICKERS']
-tickerList = usTickerFromGit(tickerConfig)
-print(f"SIZE : {len(tickerList)}")
+tickerList = usTickerFromGitAte329()
+yahooStockInfoBatchQueryRetry(tickerList)
 
-# Split ticker_list into batches of 100 items
-errorRecords = []
-batch_size = 100
-for i in range(0, len(tickerList), batch_size):
-    tickerBatch = tickerList[i : i + batch_size]
-    # yahooHistPriceBatchQuery(tickerBatch)
-    yahooStockInfoBatchQueryRetry(tickerBatch)
-
-if len(errorRecords) > 0:
-    df = pd.DataFrame(errorRecords)
-    print(df.to_markdown(index=False))  
