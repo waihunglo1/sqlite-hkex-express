@@ -52,7 +52,7 @@ async function aivenDbUpdate() {
 
 async function aivenDbUpdateForDailyStockStats() {
     const sqlDailyStockStats = `
-        select DAILY_STOCK_STATS.*, STOCK.sector, STOCK.industry, STOCK.name as short_name from DAILY_STOCK_STATS, STOCK
+        select DAILY_STOCK_STATS.*, STOCK.sector, STOCK.industry, substr(STOCK.name,0,100) as short_name from DAILY_STOCK_STATS, STOCK
         where DAILY_STOCK_STATS.symbol = STOCK.symbol
         and dt in (
             select dt from DAILY_STOCK_STATS
