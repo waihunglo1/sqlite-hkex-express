@@ -39,10 +39,11 @@ def tickersFromXls(hkexConfig):
 
     # Pad with leading zeros to 4 digits and add .HK
     filterDf.iloc[:, 0] = clean_codes.str.zfill(4) + '.HK'
-    tickerList = filterDf.iloc[:, 0].tolist()
-    return tickerList
+    column_hashmap = dict(zip(filterDf.iloc[:, 0], filterDf.iloc[:, 1]))
+    # tickerList = filterDf.iloc[:, 0].tolist()
+    return column_hashmap
 
-def yahooQuery(tickerBatch, errorRecords):
+def yahooQuery(tickerBatch, errorRecords, tickerMap):
     tickers = Ticker(tickerBatch, country='hong kong')
 
     # 1. 獲取數據
@@ -55,9 +56,10 @@ def yahooQuery(tickerBatch, errorRecords):
     records = []
     for symbol in tickerBatch:
         try:
+            tickerName = tickerMap.get(symbol,'NONE')
             records.append({
                 'symbol': symbol,
-                'name'  : quote[symbol].get("longName","NONE"),
+                'name'  : quote[symbol].get("longName",tickerName),
                 'sector': profile_data[symbol].get("sector","NONE"),
                 'industry': profile_data[symbol].get("industry","NONE"),
                 'marketCap' : quote[symbol].get("marketCap","NONE")
@@ -107,14 +109,17 @@ def insertOrReplace(records):
 
     return updated
 
-def yahooQueryStockInfoToSqlite(tickerList):
+def yahooQueryStockInfoToSqlite(tickerMap):
     # Split ticker_list into batches of 100 items
     errorRecords = []
     batch_size = 100
     updated = 0
+    # Extract keys as a standard Python list
+    tickerList = list(tickerMap.keys())
+
     for i in range(0, len(tickerList), batch_size):
         tickerBatch = tickerList[i : i + batch_size]
-        updated += yahooQuery(tickerBatch,errorRecords)
+        updated += yahooQuery(tickerBatch,errorRecords,tickerMap)
         sleep = random.uniform(1, 10)
         logging.info(f"Updated : {updated} / {len(tickerList)} / Error Records : {len(errorRecords)} / sleep : {sleep:.2f}")
         time.sleep(sleep)
@@ -133,11 +138,11 @@ logging.info(f"SQLITE : {sqliteFile}")
 
 # read xls
 hkexConfig = config['HKEX']
-tickerList = tickersFromXls(hkexConfig)
-logging.info(f"SIZE : {len(tickerList)}")
+tickerMap = tickersFromXls(hkexConfig)
+logging.info(f"SIZE : {len(tickerMap)}")
 
 # Split ticker_list into batches of items
-errorRecords = yahooQueryStockInfoToSqlite(tickerList)
+errorRecords = yahooQueryStockInfoToSqlite(tickerMap)
 if len(errorRecords) > 0:
     df = pd.DataFrame(errorRecords)
     logging.info("\n" + df.to_markdown(index=False).strip())  

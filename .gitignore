@@ -359,3 +359,4 @@ config.ini
 temp/
 
 scripts/**/*.pyc
+.service_account.json
