@@ -97,7 +97,6 @@ function sqliteProcessSingleDate(queryDate, querySymbol) {
     }
     
     normalizeRelativeStrength(priceStatsList);
-
     priceStatsList.map((priceStats) => {
 
         if (priceStats.normalise_rs > 60) {
@@ -106,14 +105,16 @@ function sqliteProcessSingleDate(queryDate, querySymbol) {
                 " sctr: " + priceStats.sctr.toFixed(2) + 
                 " rs: " + priceStats.rs.toFixed(2) + 
                 " normalise_rs: " + priceStats.normalise_rs.toFixed(2) +
-                " sma20: " + priceStats.sma20.toFixed(2) +
-                " sma50: " + priceStats.sma50.toFixed(2) +
-                " sma150: " + priceStats.sma150.toFixed(2) +
-                " priceOverSMA20: " + priceStats.rs_priceOverSMA20.toFixed(2)
-            
-            
+                " normalise_rs_v2: " + priceStats.normalise_rs_v2.toFixed(2) +
+                " priceOverSMA20: " + priceStats.rs_priceOverSMA20.toFixed(2) +
+                " normalise_priceOverSMA20: " + priceStats.normalise_priceOverSMA20.toFixed(2) +
+                " normalise_slopeSMA20: " + priceStats.normalise_slopeSMA20.toFixed(2) +
+                " normalise_slopeSMA50: " + priceStats.normalise_slopeSMA50.toFixed(2) +
+                " normalise_slopeSMA150: " + priceStats.normalise_slopeSMA150.toFixed(2)
             );
         }
+
+
         insertPriceStats(priceStats);
     });
 
@@ -496,8 +497,26 @@ function calculateStatistics(stockPrice, queryDate) {
 }
 
 function normalizeRelativeStrength(priceStats) {
+    // rs
     var minRS = 0;
     var maxRS = 0;
+
+    // sma020
+    var minSlopeSMA20 = 0;
+    var maxSlopeSMA20 = 0;
+
+    // sma050
+    var minSlopeSMA50 = 0;
+    var maxSlopeSMA50 = 0;
+
+    // sma150
+    var minSlopeSMA150 = 0;
+    var maxSlopeSMA150 = 0;
+
+    // priceOverSMA20
+    var minPriceOverSMA20 = 0;
+    var maxPriceOverSMA20 = 0;
+
     priceStats.map(ps => {
         if (ps.rs < minRS) {
             minRS = ps.rs;
@@ -505,14 +524,55 @@ function normalizeRelativeStrength(priceStats) {
         if (ps.rs != Infinity && ps.rs > maxRS) {
             maxRS = ps.rs;
         }
+
+        if( ps.rs_slopeSMA20 < minSlopeSMA20) {
+            minSlopeSMA20 = ps.rs_slopeSMA20;
+        }
+        if( ps.rs_slopeSMA20 > maxSlopeSMA20) {
+            maxSlopeSMA20 = ps.rs_slopeSMA20;
+        }
+
+        if( ps.rs_slopeSMA50 < minSlopeSMA50) {
+            minSlopeSMA50 = ps.rs_slopeSMA50;
+        }
+
+        if( ps.rs_slopeSMA50 > maxSlopeSMA50) {
+            maxSlopeSMA50 = ps.rs_slopeSMA50;
+        }
+
+        if( ps.rs_slopeSMA150 < minSlopeSMA150) {
+            minSlopeSMA150 = ps.rs_slopeSMA150;
+        }
+
+        if( ps.rs_slopeSMA150 > maxSlopeSMA150) {
+            maxSlopeSMA150 = ps.rs_slopeSMA150;
+        }
+
+        if( ps.rs_priceOverSMA20 < minPriceOverSMA20) {
+            minPriceOverSMA20 = ps.rs_priceOverSMA20;
+        }
+
+        if( ps.rs_priceOverSMA20 > maxPriceOverSMA20) {
+            maxPriceOverSMA20 = ps.rs_priceOverSMA20;
+        }
     })
 
     console.log("minRS: " + minRS + " maxRS: " + maxRS);
+    console.log("minSlopeSMA20: " + minSlopeSMA20 + " maxSlopeSMA20: " + maxSlopeSMA20);
+    console.log("minSlopeSMA50: " + minSlopeSMA50 + " maxSlopeSMA50: " + maxSlopeSMA50);
+    console.log("minSlopeSMA150: " + minSlopeSMA150 + " maxSlopeSMA150: " + maxSlopeSMA150);
+    console.log("minPriceOverSMA20: " + minPriceOverSMA20 + " maxPriceOverSMA20: " + maxPriceOverSMA20);
 
     priceStats.map(ps => {
         if(ps.rs != Infinity) {
             ps.normalise_rs = ((ps.rs - minRS) / (maxRS - minRS)) * 100;
         }
+
+        ps.normalise_slopeSMA20 = ((ps.rs_slopeSMA20 - minSlopeSMA20) / (maxSlopeSMA20 - minSlopeSMA20)) * 100;
+        ps.normalise_slopeSMA50 = ((ps.rs_slopeSMA50 - minSlopeSMA50) / (maxSlopeSMA50 - minSlopeSMA50)) * 100;
+        ps.normalise_slopeSMA150 = ((ps.rs_slopeSMA150 - minSlopeSMA150) / (maxSlopeSMA150 - minSlopeSMA150)) * 100;
+        ps.normalise_priceOverSMA20 = ((ps.rs_priceOverSMA20 - minPriceOverSMA20) / (maxPriceOverSMA20 - minPriceOverSMA20)) * 100;
+        ps.normalise_rs_v2 = 0.1 * ps.normalise_priceOverSMA20 + 0.35 * ps.normalise_slopeSMA20 + 0.4 * ps.normalise_slopeSMA50 + 0.15 * ps.normalise_slopeSMA150;
     });
 }
 
@@ -520,12 +580,13 @@ function calculateRelativeStrength(priceHistory, priceStats, priceStatsHistory) 
     const slopeSMA20 = calculateSMASlope(priceHistory, priceStats, priceStatsHistory, 20, 'sma020', 'sma20');
     const slopeSMA50 = calculateSMASlope(priceHistory, priceStats, priceStatsHistory, 50, 'sma050', 'sma50');
     const slopeSMA150 = calculateSMASlope(priceHistory, priceStats, priceStatsHistory, 150, 'sma150', 'sma150');
-    const priceOverSMA20 = priceStats.close / priceStats.sma20 * 100
+    var priceOverSMA20 = priceStats.close / priceStats.sma20 * 100
     const rs = 0.1 * priceOverSMA20 + 0.35 * slopeSMA20 + 0.4 * slopeSMA50 + 0.15 * slopeSMA150;
     // console.log(priceStats.symbol + ":" + rs.toFixed(2) + "/" + priceOverSMA20.toFixed(2) + "/" + slopeSMA20.toFixed(2) + "/" + slopeSMA50.toFixed(2) + "/" + slopeSMA150.toFixed(2));
 
     if(priceOverSMA20 > 300) {
         console.log("[ERROR] " + priceStats.symbol + " priceOverSMA20: " + priceOverSMA20.toFixed(2) + " price / slopeSMA20: " + priceStats.close + " / "  + slopeSMA20.toFixed(2));
+        priceOverSMA20 = 0;
         priceStats.rs = 0;
     } 
     else 
@@ -757,12 +818,12 @@ function calculateSctr(priceStats) {
  */
 function calculatePPO01(priceStats) {
     if (helper.isEmpty(priceStats.macd01) || helper.isEmpty(priceStats.macd02) || helper.isEmpty(priceStats.macd03)) {
-        console.log("[ERROR] macd01, macd02 or macd03 is empty for " + priceStats.symbol + " on " + priceStats.dt);
+        // console.log("[ERROR] macd01, macd02 or macd03 is empty for " + priceStats.symbol + " on " + priceStats.dt);
         return 0;   
     }
 
     if (helper.isEmpty(priceStats.macd01.histogram) || helper.isEmpty(priceStats.macd02.histogram) || helper.isEmpty(priceStats.macd03.histogram)) {
-        console.log("[ERROR] macd01, macd02 or macd03 is empty for " + priceStats.symbol + " on " + priceStats.dt);
+        // console.log("[ERROR] macd01, macd02 or macd03 is empty for " + priceStats.symbol + " on " + priceStats.dt);
         return 0;
     }
 
