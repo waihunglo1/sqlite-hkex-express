@@ -61,7 +61,7 @@ def fetchTickers(sqliteFile, whereClause):
         logging.error(f"❌ ⚪ 未知錯誤: {e}")
         sys.exit()
 
-def fetch_and_populate(sqliteFile):
+def fetch_and_populate(sqliteFile, query):
     # 1. 從 SQLite 查詢資料
     if not os.path.exists(sqliteFile):
         logging.errror(f"錯誤：找不到資料庫檔案 '{sqliteFile}'")
@@ -69,24 +69,6 @@ def fetch_and_populate(sqliteFile):
 
     logging.info("正在從 SQLite 讀取資料...")
     conn = sqlite3.connect(sqliteFile)
-
-    query = """
-            SELECT daily_market_stats.dt, up4pct1d, dn4pct1d, up25pctin100d, dn25pctin100d, 
-               up25pctin20d, dn25pctin20d,  
-               noofstocks, 
-               above20smapct / 100, 
-               above50smapct / 100, 
-               above150smapct / 100, 
-               above200smapct / 100, 
-               hsi, hsce, 
-               XLB_U4SM  / 100, XLC_U4SM  / 100, XLY_U4SM / 100,
-               XLP_U4SM / 100, XLE_U4SM / 100, XLF_U4SM / 100,
-               XLV_U4SM / 100, XLI_U4SM / 100, XLRE_U4SM / 100,
-               XLK_U4SM / 100, XLU_U4SM / 100, XLX_U4SM / 100
-            FROM daily_market_stats , DAILY_SECTORS_STATS
-            where daily_market_stats.dt = DAILY_SECTORS_STATS.dt
-            ORDER BY daily_market_stats.dt DESC    
-    """
 
     try:
         # --- PANDAS 優化：直接讀取為 DataFrame，保持真實的數據型態 (int, float, object) ---

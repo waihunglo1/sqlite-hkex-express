@@ -7,6 +7,7 @@ import logging
 import time
 import random
 import math
+import sys
 import sqlitehelper as sqliteUtil
 import gspreadhelper as gspreadUtil
 
@@ -25,8 +26,14 @@ config.read('config/analyst-data-hk.ini', encoding='utf-8')
 sqliteFile = config['SQLITE']['FILE']
 logging.info(f"SQLITE : {sqliteFile}") 
 
+def populate(config, id):
+    sql = config[id]['SQL']
+    tabName = config[id]['TAB_NAME']
+    df = sqliteUtil.fetch_and_populate(sqliteFile,sql)
+    gspreadUtil.publish_gsheet(df,tabName)
+
 if __name__ == "__main__":
-    df = sqliteUtil.fetch_and_populate(sqliteFile)
-    gspreadUtil.publish_gsheet(df)
+    populate(config,'GOOGLE-SPREADSHEET-01')
+    populate(config,'GOOGLE-SPREADSHEET-02')
 
 

@@ -11,7 +11,7 @@ def dummy():
     sh = gc.open("MARKET-ANALYSIS").sheet1
     sh.update_acell("A1", "Hello World")
 
-def publish_gsheet(df):
+def publish_gsheet(df, tabName):
     headers = df.columns.tolist()
     data_rows = df.values.tolist()
     data_to_upload = data_rows
@@ -27,9 +27,8 @@ def publish_gsheet(df):
         sh = gc.open("MARKET-ANALYSIS")
 
         # 開啟指定工作表，若未指定則開啟第一個
-        wsHkMarketBreadth = "HKMBRAW"
         worksheet = (
-            sh.worksheet(wsHkMarketBreadth) if wsHkMarketBreadth else sh.sheet1
+            sh.worksheet(tabName) if tabName else sh.sheet1
         )
 
         logging.info("正在清除舊資料...")
@@ -49,7 +48,7 @@ def publish_gsheet(df):
         worksheet.update(
             range_name=target_range, 
             values=full_payload,
-            value_input_option='USER_ENTERED'
+            value_input_option='RAW'
         )
 
         logging.info("🎉 資料已成功同步至 Google Sheets！")
