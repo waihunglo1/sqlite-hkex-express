@@ -10,6 +10,7 @@ const fs = require('fs');
 const formularjs = require('@formulajs/formulajs');
 const dfd = require("danfojs");
 const minimist = require('minimist');
+const { performance } = require('perf_hooks');
 
 const analystConfig = ini.parse(fs.readFileSync(ANALYST_DATA_INI, 'utf-8'));
 const sqliteDb = require('better-sqlite3')(analystConfig.SQLITE.FILE, {});
@@ -20,8 +21,8 @@ const statisticsHelper = require('./statisticsHelper.js');
 
 const queryDate = ''; // = '20260730'
 const querySymbol = '' // '2697.HK';
-const queryStartDate = '20071013'; // '20260730'
-const queryEndDate = '20251013'; // '20260730'
+const queryStartDate = ''; // '20260730'
+const queryEndDate = ''; // '20260730'
 
 /**
  * Main entry point for processing data
@@ -130,9 +131,10 @@ function sqliteProcessSingleDate(queryDate, querySymbol) {
     const slopeSMA20List = [];
     const slopeSMA50List = [];
     const slopeSMA150List = [];
+    const warningList = [];
 
     for (const symbol of symbols) {
-        var priceStats = calculateStatistics(symbol, queryDate);
+        var priceStats = calculateStatistics(symbol, queryDate, warningList);
         priceStatsList.push(priceStats);
 
         // append to list for normalization
@@ -141,6 +143,11 @@ function sqliteProcessSingleDate(queryDate, querySymbol) {
         slopeSMA50List.push(priceStats.rs_slopeSMA50);
         slopeSMA150List.push(priceStats.rs_slopeSMA150);
     }
+
+    // warning list
+    console.log("[INFO] warning list for " + queryDate + " : " + warningList.length);
+    let df = new dfd.DataFrame(warningList)
+    df.print(); 
     
     if(priceStatsList.length <= 0) {
         return 0;
@@ -167,7 +174,7 @@ function sqliteProcessSingleDate(queryDate, querySymbol) {
  * @param {*} queryDate 
  * @returns 
  */
-function calculateStatistics(stockPrice, queryDate) {
+function calculateStatistics(stockPrice, queryDate, warningList) {
     const dailyStockPriceStmt = sqliteDb.prepare('SELECT * FROM DAILY_STOCK_PRICE where symbol = ? and dt <= ? order by dt desc limit 200');
     const priceHistory = dailyStockPriceStmt.all(stockPrice.symbol, queryDate);
 
@@ -270,7 +277,7 @@ function calculateStatistics(stockPrice, queryDate) {
     calculateVolumeProfile(priceHistory, priceStats);
 
     if(priceStatsHistory.length > 0) {
-        calculateRelativeStrength(priceHistory, priceStats, priceStatsHistory);
+        calculateRelativeStrength(priceHistory, priceStats, priceStatsHistory, warningList);
     }
 
     // if(priceStats.sctr >= 75) {
@@ -289,9 +296,11 @@ function normalizeRelativeStrength(priceStatsList, priceOverSMA20List, slopeSMA2
         'slopeSMA150List': slopeSMA150List
     }
 
+    console.log("Data distribution before normalization:");
     let df = new dfd.DataFrame(data)
     df.describe().print(); 
 
+    const startTime = performance.now();
     const relativeStrengthList = [];
     priceStatsList.map(ps => {
         try {
@@ -319,6 +328,8 @@ function normalizeRelativeStrength(priceStatsList, priceOverSMA20List, slopeSMA2
         }
     });    
 
+    const endTime = performance.now();
+    const duration = endTime - startTime;
     data =
     {
         'priceOverSMA20List': priceStatsList.map(item => item.rs_priceOverSMA20),
@@ -329,13 +340,12 @@ function normalizeRelativeStrength(priceStatsList, priceOverSMA20List, slopeSMA2
         'normalise_rs_v2': priceStatsList.map(item => item.normalise_rs_v2)
     }
 
+    console.log(`Normalize 處理總共花費了 ${duration.toFixed(2)} 毫秒。`);
     df = new dfd.DataFrame(data)
     df.describe().print(); 
-
-
 }
 
-function calculateRelativeStrength(priceHistory, priceStats, priceStatsHistory) {
+function calculateRelativeStrength(priceHistory, priceStats, priceStatsHistory, warningList) {
     const slopeSMA20 = calculateSMASlope(priceHistory, priceStats, priceStatsHistory, 20, 'sma020', 'sma20');
     const slopeSMA50 = calculateSMASlope(priceHistory, priceStats, priceStatsHistory, 50, 'sma050', 'sma50');
     const slopeSMA150 = calculateSMASlope(priceHistory, priceStats, priceStatsHistory, 150, 'sma150', 'sma150');
@@ -344,16 +354,24 @@ function calculateRelativeStrength(priceHistory, priceStats, priceStatsHistory) 
     if(priceStats.sma20 > 0) {
         priceOverSMA20 = priceStats.close / priceStats.sma20 * 100;
     } else {        
-        console.log("[WARN] " + priceStats.symbol + 
-            " priceOverSMA20: " + priceOverSMA20.toFixed(2) + 
-            ", price / slopeSMA20: " + priceStats.close + " / "  + slopeSMA20.toFixed(2));
+        warningList.push({
+            "symbol" : priceStats.symbol,
+            "priceOverSMA20": priceOverSMA20.toFixed(2),
+            "close": priceStats.close,
+            "slopeSMA20": slopeSMA20.toFixed(2),
+            "condition": "sma20 is zero"
+        });
         priceOverSMA20 = 0;
     }
 
     if(priceOverSMA20 > 300) {
-        console.log("[WARN] " + priceStats.symbol + 
-            " priceOverSMA20 > 300 : " + priceOverSMA20.toFixed(2) + 
-            ", price / slopeSMA20: " + priceStats.close + " / "  + slopeSMA20.toFixed(2));
+        warningList.push({
+            "symbol" : priceStats.symbol,
+            "priceOverSMA20": priceOverSMA20.toFixed(2),
+            "close": priceStats.close,
+            "slopeSMA20": slopeSMA20.toFixed(2),
+            "condition": "priceOverSMA20 is greater than 300"
+        });
         priceOverSMA20 = 0;   
     } 
 
