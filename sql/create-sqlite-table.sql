@@ -91,6 +91,7 @@ CREATE TABLE IF NOT EXISTS DAILY_STOCK_STATS
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_daily_stock_stats ON DAILY_STOCK_STATS (symbol, dt);
+create index if not exists idx_daily_stock_stats_01  ON DAILY_STOCK_STATS (dt);
 
 
 CREATE TABLE IF NOT EXISTS DAILY_MARKET_STATS
