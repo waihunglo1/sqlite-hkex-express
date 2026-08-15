@@ -17,7 +17,6 @@ const sqliteDb = require('better-sqlite3')(analystConfig.SQLITE.FILE, {});
 sqliteDb.pragma('journal_mode = WAL');
 const helper = require("./helper.js");
 const sqliteHelper = require('./sqliteHelper.js');
-const statisticsHelper = require('./statisticsHelper.js');
 
 const queryDate = ''; // = '20260730'
 const querySymbol = '' // '2697.HK';
@@ -47,8 +46,6 @@ function processDataLocal() {
         sqliteProcessMultipleDates();
     }
 
-    statisticsHelper.sqliteLocalUpdateMarketStats();
-    statisticsHelper.sqliteLocalUpdateSectorsStats();
     console.log("Completed processing data. file path: " + analystConfig.SQLITE.FILE);
 }
 

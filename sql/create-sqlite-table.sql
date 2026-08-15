@@ -231,3 +231,16 @@ select dt from (
         except 
         select dt from daily_stock_stats group by dt
         ;                 
+
+CREATE VIEW IF NOT EXISTS HK_INDICES AS
+select hsi.dt, hsi, hsce from 
+(
+            select dt, close as hsi from daily_stock_price
+            where symbol = '^HSI'
+) HSI 
+left outer join
+(
+            select dt, close as hsce from daily_stock_price
+            where symbol = '^HSCE'
+) HSCE on HSI.dt = HSCE.dt
+order by hsi.dt desc        

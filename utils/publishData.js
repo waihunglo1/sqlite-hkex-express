@@ -6,25 +6,32 @@ const avienDbHelper = require('./pgDbConnHelper.js');
 const ini = require('ini');
 const fs = require('fs');
 const analystConfig = ini.parse(fs.readFileSync(ANALYST_DATA_INI, 'utf-8'));
+const statisticsHelper = require('./statisticsHelper.js');
 const sqliteDb = require('better-sqlite3')(analystConfig.SQLITE.FILE, {});
 sqliteDb.pragma('journal_mode = WAL');
 
+
+/**
+* Populate statistics into Aiven database
+*/
 populateStatisticsToAvien();
 
 /**
  * Populate statistics into Aiven database
  */
 async function populateStatisticsToAvien() {
-    // populate statistics Aiven database
+    statisticsHelper.sqliteLocalUpdateMarketStats();
+    statisticsHelper.sqliteLocalUpdateSectorsStats();
+    refreshDataToAvien();
+}
+
+async function refreshDataToAvien() {
+        // populate statistics Aiven database
     console.log("Start updating Aiven database.");
-    await aivenDbUpdate().then(() => {
-        aivenDbUpdateForDailyStockStats().then(() => {
-            sqliteDb.close();
-        }).catch((error) => {
-            console.error("Error updating Aiven daily stock stats:", error);
-        });
+    await aivenDbUpdateForDailyStockStats().then(() => {
+        sqliteDb.close();
     }).catch((error) => {
-        console.error("Error updating Aiven database:", error);
+        console.error("Error updating Aiven daily stock stats:", error);
     });
 }
 
