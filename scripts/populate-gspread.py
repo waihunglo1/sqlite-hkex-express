@@ -29,11 +29,12 @@ logging.info(f"SQLITE : {sqliteFile}")
 def populate(config, id):
     sql = config[id]['SQL']
     tabName = config[id]['TAB_NAME']
-    df = sqliteUtil.fetch_and_populate(sqliteFile,sql)
-    gspreadUtil.publish_gsheet(df,tabName)
+    file = config[id]['FILE']
+    funcName = config[id]['FUNCTION_NAME']
+    df = sqliteUtil.fetch_and_populate(sqliteFile, sql, funcName)
+    gspreadUtil.publish_gsheet(df,file,tabName)
 
 if __name__ == "__main__":
     populate(config,'GOOGLE-SPREADSHEET-01')
     populate(config,'GOOGLE-SPREADSHEET-02')
-
 

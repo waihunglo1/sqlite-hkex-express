@@ -127,7 +127,7 @@ async function createDirectoryIfNotExists(directoryPath) {
  */
 const loadIndexDataByYahooFinance = async (yahooFinance) => {
   const indexes = ['^HSI', '^HSCE'];
-  const queryOptions = { period1: '2024-01-01', /* ... */ };
+  const queryOptions = { period1: '2006-10-13', /* ... */ };
 
   for (const index of indexes) {
     const result01 = await yahooFinance.chart(index, queryOptions, { validateResult: false });

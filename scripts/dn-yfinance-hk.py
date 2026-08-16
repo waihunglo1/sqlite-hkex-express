@@ -9,6 +9,7 @@ import logging
 import time
 import random
 import math
+import translatorhelper as translator
 
 # 1. 設定日誌格式：包含 [時間] [層級] 檔案名稱:行數 - 訊息
 logging.basicConfig(
@@ -44,7 +45,7 @@ def tickersFromXls(hkexConfig):
     return column_hashmap
 
 def yahooQuery(tickerBatch, errorRecords, tickerMap):
-    tickers = Ticker(tickerBatch, country='hong kong')
+    tickers = Ticker(tickerBatch, country="hong kong")
 
     # 1. 獲取數據
     # Fetch the raw data dictionaries
@@ -60,9 +61,9 @@ def yahooQuery(tickerBatch, errorRecords, tickerMap):
             records.append({
                 'symbol': symbol,
                 'name'  : quote[symbol].get("longName",tickerName),
-                'sector': profile_data[symbol].get("sector","NONE"),
-                'industry': profile_data[symbol].get("industry","NONE"),
-                'marketCap' : quote[symbol].get("marketCap","NONE")
+                'sector': translator.financial_term(profile_data[symbol].get("sector","NONE"), "sector"),
+                'industry': translator.financial_term(profile_data[symbol].get("industry","NONE"), "industry"),
+                'marketCap' : quote[symbol].get("marketCap",0)
             })
         except Exception as e:
             # logging.error(f"❌ [{symbol}] 未知錯誤: {e} / {profile[symbol]}")

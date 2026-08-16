@@ -164,7 +164,15 @@ def dumpErrorRecord(title, records):
     if len(records) > 0:
         df = pd.DataFrame(records)
         logging.info(f"Error Record : {title}")
-        logging.info("\n" + df.to_markdown(index=False).lstrip())          
+        logging.info("\n" + df.to_markdown(index=False).lstrip())
+
+def splitStringToArray(input):
+    if isinstance(input, str) and input:
+        names = [name.strip() for name in input.split(",")]
+        return names
+    else:
+        logging.error("設定檔錯誤：'run_mode' 為空或格式不正確。")
+        return None     
 
 if __name__ == "__main__":
     logging.info("This is a different version of the module.py file.")    

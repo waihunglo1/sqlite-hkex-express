@@ -6,11 +6,6 @@ import logging
 os.environ['REQUESTS_CA_BUNDLE'] = certifi.where()
 os.environ['SSL_CERT_FILE'] = certifi.where()
 
-def dummy():
-    gc = gspread.service_account(filename='.service_account.json')
-    sh = gc.open("MARKET-ANALYSIS").sheet1
-    sh.update_acell("A1", "Hello World")
-
 def cleanPayload(full_payload):
     # --- 新增：處理 full_payload 資料，防止特定欄位變成超連結 ---
     # 假設你想處理整張表，或者你可以加入 if 條件只針對特定欄位索引（例如 col_idx == 2）
@@ -28,7 +23,7 @@ def cleanPayload(full_payload):
     # --------------------------------------------------------    
     return cleaned_payload
 
-def publish_gsheet(df, tabName):
+def publish_gsheet(df, file, tabName):
     headers = df.columns.tolist()
     data_rows = df.values.tolist()
     data_to_upload = data_rows
@@ -42,7 +37,7 @@ def publish_gsheet(df, tabName):
     logging.info("正在連接 Google Sheets...")
     try:
         gc = gspread.service_account(filename='.service_account.json')
-        sh = gc.open("MARKET-ANALYSIS")
+        sh = gc.open(file)
 
         # 開啟指定工作表，若未指定則開啟第一個
         worksheet = (
@@ -69,7 +64,7 @@ def publish_gsheet(df, tabName):
             value_input_option='USER_ENTERED'
         )
 
-        logging.info("🎉 資料已成功同步至 Google Sheets！")
+        logging.info(f"🎉 資料已成功同步至 Google Sheets！ {file} / {tabName}")
 
     except Exception as e:
-        logging.error(f"發生錯誤：{e}")
+        logging.error(f"發生錯誤：{e}  {file} / {tabName}")
