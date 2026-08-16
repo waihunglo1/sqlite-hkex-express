@@ -61,8 +61,8 @@ def yahooQuery(tickerBatch, errorRecords, tickerMap):
             records.append({
                 'symbol': symbol,
                 'name'  : quote[symbol].get("longName",tickerName),
-                'sector': translator.financial_term(profile_data[symbol].get("sector","NONE"), "sector"),
-                'industry': translator.financial_term(profile_data[symbol].get("industry","NONE"), "industry"),
+                'sector': translator.financial_term(profile_data[symbol].get("sector","NONE"), "sector", symbol),
+                'industry': translator.financial_term(profile_data[symbol].get("industry","NONE"), "industry", symbol),
                 'marketCap' : quote[symbol].get("marketCap",0)
             })
         except Exception as e:

@@ -1,3 +1,5 @@
+import logging
+
 # 1. 原始對照表
 _SECTOR_RAW = {
     "Basic Materials": "基礎材料",
@@ -11,7 +13,8 @@ _SECTOR_RAW = {
     "Real Estate": "房地產",
     "Technology": "科技",
     "Utilities": "公用事業",
-    "NONE": "其他"
+    "NONE": "其他",
+    "": "其他"
 }
 
 _INDUSTRY_RAW = {
@@ -155,7 +158,8 @@ _INDUSTRY_RAW = {
     "Utilities - Renewable": "再生能源公用事業",
     "Waste Management": "廢棄物管理",
     "UNKNOWN": "未知",
-    "NONE": "其他"    
+    "NONE": "其他",
+    "": "其他"    
 }
 
 # 2. 自動將字典的 Keys 轉換為全大寫 (字典推導式)
@@ -163,8 +167,9 @@ SECTOR_TRANSLATION = {k.upper(): v for k, v in _SECTOR_RAW.items()}
 INDUSTRY_TRANSLATION = {k.upper(): v for k, v in _INDUSTRY_RAW.items()}
 
 # 3. 安全查詢函數 (自動將輸入值轉為大寫，並移除前後空格)
-def financial_term(english_name, term_type="industry"):
+def financial_term(english_name, term_type="industry", symbol=""):
     if not english_name or not isinstance(english_name, str):
+        logging.error(f"Unable to translate : {symbol} / term_type :{english_name}")
         return english_name
     
     # 選擇對照字典

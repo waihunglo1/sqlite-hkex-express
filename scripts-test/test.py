@@ -35,7 +35,7 @@ logging.basicConfig(
 
 def dummy():
     gc = gspread.service_account(filename='.service_account.json')
-    sh = gc.open("HK-STOCKS-ANALYSIS")
+    sh = gc.open("HK-STOCKS-ANALYSIS-01")
     # sh.update_acell("A1", "Hello World")
 
 def translate():
