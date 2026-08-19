@@ -1,6 +1,6 @@
 require('dotenv').config();
 const { ANALYST_DATA_INI } = process.env;
-
+const logger = require('./logger')
 const helper = require("./helper");
 const avienDbHelper = require('./pgDbConnHelper.js');
 const ini = require('ini');
@@ -27,17 +27,17 @@ async function populateStatisticsToAvien() {
 
 async function refreshDataToAvien() {
         // populate statistics Aiven database
-    console.log("Start updating Aiven database.");
+    logger.info("Start updating Aiven database.");
     await aivenDbUpdateForDailyStockStats().then(() => {
         sqliteDb.close();
     }).catch((error) => {
-        console.error("Error updating Aiven daily stock stats:", error);
+        logger.error("Error updating Aiven daily stock stats:", error);
     });
 }
 
 async function aivenDbUpdate() {
     var version = await avienDbHelper.getAivenPgVersion();
-    console.log("Aiven Version: ", version);
+    logger.info("Aiven Version: ", version);
 
     // market stats
     const sqlMarketStats =
@@ -54,7 +54,7 @@ async function aivenDbUpdate() {
     const sectorStats = sqliteDb.prepare(sqlSectorStats).all();
     await avienDbHelper.updateSectorStats(sectorStats);
 
-    console.log("Aiven market stats updated. Total records: " + marketStats.length + ", sector status: " + sectorStats.length);
+    logger.info("Aiven market stats updated. Total records: " + marketStats.length + ", sector status: " + sectorStats.length);
 }
 
 async function aivenDbUpdateForDailyStockStats() {
@@ -70,7 +70,7 @@ async function aivenDbUpdateForDailyStockStats() {
         order by dt DESC`;
 
     const dailyStockStats = sqliteDb.prepare(sqlDailyStockStats).all();
-    console.log("Aiven daily stock stats: ", dailyStockStats.length);
+    logger.info("Aiven daily stock stats: ", dailyStockStats.length);
 
     for(const dailyStat of dailyStockStats) {
         fillHistoricalSCTR(dailyStat);
@@ -78,7 +78,7 @@ async function aivenDbUpdateForDailyStockStats() {
     }
 
     await avienDbHelper.updateDailyStockStats(dailyStockStats);
-    console.log("Aiven daily stock stats updated. Total records: " + dailyStockStats.length);
+    logger.info("Aiven daily stock stats updated. Total records: " + dailyStockStats.length);
 }
 
 function fillHistoricalSCTR(dailyStat) {
@@ -87,7 +87,7 @@ function fillHistoricalSCTR(dailyStat) {
     const sctr = sqliteDb.prepare(sqlSCTR).all(dailyStat.symbol);
 
     if (sctr.length < 20) {
-        console.log("Not enough SCTR data for " + dailyStat.symbol + ". Only " + sctr.length + " records found.");
+        logger.info("Not enough SCTR data for " + dailyStat.symbol + ". Only " + sctr.length + " records found.");
         // Fill with zeros if not enough data
         for (let i = sctr.length; i < 20; i++) {
             sctr.push({ sctr: 0 });
@@ -122,7 +122,7 @@ function fillHistoricalNormalizeRS(dailyStat) {
     const rs = sqliteDb.prepare(sqlRS).all(dailyStat.symbol);
 
     if (rs.length < 20) {
-        console.log("Not enough rs data for " + dailyStat.symbol + ". Only " + rs.length + " records found.");
+        logger.info("Not enough rs data for " + dailyStat.symbol + ". Only " + rs.length + " records found.");
         // Fill with zeros if not enough data
         for (let i = rs.length; i < 20; i++) {
             rs.push({ rs: 0 });

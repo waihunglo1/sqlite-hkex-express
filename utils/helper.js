@@ -7,7 +7,7 @@ const extract = require('extract-zip')
 const { mkdir } = require('node:fs/promises');
 const sqliteHelper = require('./sqliteHelper.js');
 const moment = require('moment');
-
+const logger = require('./logger')
 /**
  * 
  * @param {*} symbol 
@@ -116,9 +116,9 @@ async function unzipFile(path, outputDir) {
 async function createDirectoryIfNotExists(directoryPath) {
   try {
     await mkdir(directoryPath, { recursive: true });
-    console.log(`Directory created or already exists at: ${directoryPath}`);
+    logger.info(`Directory created or already exists at: ${directoryPath}`);
   } catch (error) {
-    console.error(`Error creating directory: ${error.message}`);
+    logger.error(`Error creating directory: ${error.message}`);
   }
 }
 
@@ -152,7 +152,7 @@ const loadIndexDataByYahooFinance = async (yahooFinance) => {
       }
 
       await sqliteHelper.insertDailyStockPrice(rows);
-      console.log("Yahoo indexes Processed[" + index + "] : " + rows.length);
+      logger.info("Yahoo indexes Processed[" + index + "] : " + rows.length);
     }
   }
 }

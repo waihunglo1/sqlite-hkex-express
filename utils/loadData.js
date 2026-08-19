@@ -11,7 +11,7 @@ const helper = require("./helper");
 const mmutils = require('./mm-utils.js');
 const scraper = require('./scraper.js'); // Import the traverseDir function
 const sqliteHelper = require('./sqliteHelper.js');
-
+const logger = require('./logger')
 /**
  * Load data from HKEX and process it.
  * This function checks if the extraction path exists, and if not, it unzips the files.

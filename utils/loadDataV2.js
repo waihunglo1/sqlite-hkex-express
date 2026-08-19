@@ -9,7 +9,7 @@ const YahooFinance = require('yahoo-finance2').default; // NOTE the .default
 const yahooFinance = new YahooFinance({
  suppressNotices: ["yahooSurvey"] // optional
 });
-
+const logger = require('./logger')
 /*
  * main function to execute the data loading and filling process
  */
@@ -17,12 +17,12 @@ sqliteHelper.dumpSqliteVerion().then(() => {
     helper.loadIndexDataByYahooFinance(yahooFinance).then(async () => {
       try {
         const result = await scraper.traverseDir();
-        console.log("Data loading and filling process completed successfully. result = ", result);
+        logger.info("Data loading and filling process completed successfully. result = ", result);
       }
       catch(error) {
-        console.error("Error in the data loading and filling process:", error);
+        logger.error("Error in the data loading and filling process:", error);
       }
     }).catch((error) => {
-        console.error("Error loading index data:", error);
+        logger.error("Error loading index data:", error);
     })
 });

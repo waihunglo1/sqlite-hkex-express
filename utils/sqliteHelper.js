@@ -1,6 +1,6 @@
 require('dotenv').config();
 const { ANALYST_DATA_INI } = process.env;
-
+const logger = require('./logger')
 const fs = require('node:fs');
 const ini = require('ini');
 const { db } = require('@vercel/postgres');
@@ -14,13 +14,13 @@ sqliteDb.pragma('journal_mode = WAL');
  */
 async function dumpSqliteVerion () {
     const row01 = sqliteDb.prepare('SELECT sqlite_version() AS version').get();
-    console.log(`SQLite Version: ${row01.version}`);
+    logger.info(`SQLite Version: ${row01.version}`);
 
     const sqlStmt = sqliteDb.prepare('SELECT name FROM sqlite_master');
     const schemas = sqlStmt.all();
         
     for (const schema of schemas) {
-        console.log(`Object : ${schema.name}`);
+        logger.info(`Object : ${schema.name}`);
     }
 }
 
@@ -37,8 +37,8 @@ const queryDailyStockPriceStatistics = async () => {
          FROM DAILY_STOCK_PRICE 
          WHERE symbol not like '^%'`;
     const row02 = sqliteDb.prepare(hcSql).get();
-    console.log("[INFO] sqlite db statistics");
-    console.log(row02);
+    logger.info("[INFO] sqlite db statistics");
+    logger.info(row02);
 }
 
 
@@ -74,7 +74,7 @@ function unknownStockLogger(stock) {
     }
 
     const logTime = moment().format('YYYY-MM-DD HH:mm:ss');
-    console.log(`[${logTime}] [WARN] Unknown stock: ${stock.code} - ${stock.name}`);    
+    logger.info(`[${logTime}] [WARN] Unknown stock: ${stock.code} - ${stock.name}`);    
 
     return false;
 }
@@ -151,7 +151,7 @@ function insertPriceStats(priceStats) {
     );
 
     if (info.changes <= 0) {
-        console.log("[ERROR] Inserted " + priceStats.symbol + " " + priceStats.dt);
+        logger.info("[ERROR] Inserted " + priceStats.symbol + " " + priceStats.dt);
     }
 
 }

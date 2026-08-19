@@ -1,6 +1,6 @@
 require('dotenv').config();
+const logger = require('./logger')
 const { ANALYST_DATA_INI } = process.env;
-
 const ini = require('ini');
 const fs = require('fs');
 const analystConfig = ini.parse(fs.readFileSync(ANALYST_DATA_INI, 'utf-8'));
@@ -24,6 +24,17 @@ function sqliteLocalUpdateSectorsStats() {
         when 'Real Estate' then 'XLRE'
         when 'Technology' then 'XLK'
         when 'Utilities' then 'XLU'   
+        when '基礎材料' then 'XLB'
+        when '通訊服務' then 'XLC'
+        when '非必需消費品' then 'XLY'
+        when '必需消費品' then 'XLP'
+        when '能源' then 'XLE'
+        when '金融服務' then 'XLF'
+        when '醫療保健' then 'XLV'
+        when '工業' then 'XLI'
+        when '房地產' then 'XLRE'
+        when '科技' then 'XLK'
+        when '公用事業' then 'XLU'           
         else 'XLX'
         end sector,
         round(cast(up4pct1d as float) / tot * 100.0, 2) u4sm, 
@@ -126,7 +137,7 @@ function sqliteLocalUpdateSectorsStats() {
                 stats.XLX_SM = sectorStat.sm;
                 break;
             default:
-                console.log("[ERROR] Unknown sector: " + sectorStat.sector + " on " + sectorStat.dt);
+                logger.info("[ERROR] Unknown sector: " + sectorStat.sector + " on " + sectorStat.dt);
                 break;
         }
 
@@ -135,7 +146,7 @@ function sqliteLocalUpdateSectorsStats() {
     });
 
     newSectorStatusToDb(lastStats);
-    console.log("Sectors stats updated. Total records: " + count);
+    logger.info("Sectors stats updated. Total records: " + count);
 }
 
 function newSectorStatusToDb(stats) {
@@ -186,7 +197,7 @@ function newSectorStatusToDb(stats) {
         stats.XLX_U4SM, stats.XLX_D4SM, stats.XLX_SM
     );
     if (info.changes <= 0) {
-        console.log("[ERROR] Inserted " + marketStat.dt);
+        logger.info("[ERROR] Inserted " + marketStat.dt);
     }   
 }
 
@@ -258,11 +269,11 @@ function sqliteLocalUpdateMarketStats() {
             marketStat.up25pctin20d, marketStat.dn25pctin20d, marketStat.up50pctin20d, marketStat.dn50pctin20d, marketStat.noofstocks, 
             marketStat.above200smapct, marketStat.above150smapct, marketStat.above50smapct, marketStat.above20smapct, marketStat.hsi, marketStat.hsce);
         if (info.changes <= 0) {
-            console.log("[ERROR] Inserted " + marketStat.dt);
+            logger.info("[ERROR] Inserted " + marketStat.dt);
         }
     });
 
-    console.log("Market stats updated. Total records: " + marketStats.length);
+    logger.info("Market stats updated. Total records: " + marketStats.length);
 }
 
 module.exports = {

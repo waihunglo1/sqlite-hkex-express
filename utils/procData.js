@@ -17,6 +17,7 @@ const sqliteDb = require('better-sqlite3')(analystConfig.SQLITE.FILE, {});
 sqliteDb.pragma('journal_mode = WAL');
 const helper = require("./helper.js");
 const sqliteHelper = require('./sqliteHelper.js');
+const logger = require('./logger')
 
 const queryDate = ''; // = '20260730'
 const querySymbol = '' // '2697.HK';
@@ -34,7 +35,7 @@ processDataLocal();
  */
 function processDataLocal() {
     // process data by dates
-    console.log("Start processing data. file path: " + analystConfig.SQLITE.FILE);
+    logger.info("Start processing data. file path: " + analystConfig.SQLITE.FILE);
 
     if(! helper.isEmpty(queryDate) && !helper.isEmpty(querySymbol)) {
         sqliteProcessSingleDate(queryDate, querySymbol);
@@ -46,7 +47,7 @@ function processDataLocal() {
         sqliteProcessMultipleDates();
     }
 
-    console.log("Completed processing data. file path: " + analystConfig.SQLITE.FILE);
+    logger.info("Completed processing data. file path: " + analystConfig.SQLITE.FILE);
 }
 
 /**
@@ -93,9 +94,9 @@ function sqliteProcessMultipleDates() {
 function sqliteProcessDates(dates) {
     if (dates.length > 0) {
         dates.forEach((date) => {
-            console.log("[INFO] process " + date.dt + " started.");
+            logger.info("process " + date.dt + " started.");
             var count = sqliteProcessSingleDate(date.dt);
-            console.log("[INFO] process " + date.dt + " completed. count: " + count);
+            logger.info("process " + date.dt + " completed. count: " + count);
         });
     }
 }
@@ -142,7 +143,7 @@ function sqliteProcessSingleDate(queryDate, querySymbol) {
     }
 
     // warning list
-    console.log("[INFO] warning list for " + queryDate + " : " + warningList.length);
+    logger.info("warning list for " + queryDate + " : " + warningList.length);
     let df = new dfd.DataFrame(warningList)
     df.print(); 
     
@@ -278,7 +279,7 @@ function calculateStatistics(stockPrice, queryDate, warningList) {
     }
 
     // if(priceStats.sctr >= 75) {
-    //    console.log(stockPrice.symbol + " price history length: " + priceHistory.length + " sctr: " + priceStats.sctr + " dt: " + priceStats.dt);
+    //    logger.info(stockPrice.symbol + " price history length: " + priceHistory.length + " sctr: " + priceStats.sctr + " dt: " + priceStats.dt);
     // }
     return priceStats;
 }
@@ -293,7 +294,7 @@ function normalizeRelativeStrength(priceStatsList, priceOverSMA20List, slopeSMA2
         'slopeSMA150List': slopeSMA150List
     }
 
-    console.log("Data distribution before normalization:");
+    logger.info("Data distribution before normalization:");
     let df = new dfd.DataFrame(data)
     df.describe().print(); 
 
@@ -313,7 +314,7 @@ function normalizeRelativeStrength(priceStatsList, priceOverSMA20List, slopeSMA2
 
             relativeStrengthList.push(ps.normalise_rs);
         } catch (error) {
-            console.log("[ERROR STEP 1] " + ps.symbol + " error: " + error);
+            logger.info("[ERROR STEP 1] " + ps.symbol + " error: " + error);
         }
     });
 
@@ -321,7 +322,7 @@ function normalizeRelativeStrength(priceStatsList, priceOverSMA20List, slopeSMA2
         try {
             ps.normalise_rs_v2 = formularjs.PERCENTRANKINC(relativeStrengthList, ps.normalise_rs, 2) * 100;
         } catch (error) {
-            console.log("[ERROR STEP 2] " + ps.symbol + " error: " + error);
+            logger.info("[ERROR STEP 2] " + ps.symbol + " error: " + error);
         }
     });    
 
@@ -337,7 +338,7 @@ function normalizeRelativeStrength(priceStatsList, priceOverSMA20List, slopeSMA2
         'normalise_rs_v2': priceStatsList.map(item => item.normalise_rs_v2)
     }
 
-    console.log(`Normalize 處理總共花費了 ${duration.toFixed(2)} 毫秒。`);
+    logger.info(`Normalize 處理總共花費了 ${duration.toFixed(2)} 毫秒。`);
     df = new dfd.DataFrame(data)
     df.describe().print(); 
 }
@@ -385,12 +386,12 @@ function calculateSMASlope(priceHistory, priceStats, priceStatsHistory, smaPerio
     sma20Data.unshift([priceStats.dt, priceStats[targetKey2]]);
     const dataForSlope = sma20Data.reverse().map((data, index) => [index , data[1]]);
 
-    // console.log("smaData: " + JSON.stringify(sma20Data));
-    // console.log("smaData: " + dataForSlope);
+    // logger.info("smaData: " + JSON.stringify(sma20Data));
+    // logger.info("smaData: " + dataForSlope);
 
     const slope = simpleStatistics.linearRegression(dataForSlope).m; 
 
-    // console.log("slope: " + slope);
+    // logger.info("slope: " + slope);
 
     return slopeToDegrees(slope);
 }
@@ -596,12 +597,12 @@ function calculateSctr(priceStats) {
  */
 function calculatePPO01(priceStats) {
     if (helper.isEmpty(priceStats.macd01) || helper.isEmpty(priceStats.macd02) || helper.isEmpty(priceStats.macd03)) {
-        // console.log("[ERROR] macd01, macd02 or macd03 is empty for " + priceStats.symbol + " on " + priceStats.dt);
+        // logger.info("[ERROR] macd01, macd02 or macd03 is empty for " + priceStats.symbol + " on " + priceStats.dt);
         return 0;   
     }
 
     if (helper.isEmpty(priceStats.macd01.histogram) || helper.isEmpty(priceStats.macd02.histogram) || helper.isEmpty(priceStats.macd03.histogram)) {
-        // console.log("[ERROR] macd01, macd02 or macd03 is empty for " + priceStats.symbol + " on " + priceStats.dt);
+        // logger.info("[ERROR] macd01, macd02 or macd03 is empty for " + priceStats.symbol + " on " + priceStats.dt);
         return 0;
     }
 

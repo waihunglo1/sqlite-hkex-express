@@ -1,6 +1,6 @@
 require('dotenv').config();
+const logger = require('./logger')
 const { AVIEN_DB_USER, AVIEN_DB_PASSWORD, AVIEN_DB_HOST, AVIEN_DB_PORT, AVIEN_DB_DATABASE } = process.env;
-
 const postgres = require('postgres');
 const sql = postgres(`postgres://${AVIEN_DB_USER}:${AVIEN_DB_PASSWORD}@${AVIEN_DB_HOST}:${AVIEN_DB_PORT}/${AVIEN_DB_DATABASE}?sslmode=require`, {
   idle_timeout: 20,
@@ -15,35 +15,35 @@ async function getAivenPgVersion() {
 
 async function updateMarketStats(marketStats) {
     await sql`delete from daily_market_stats;`; // Clear existing data
-    console.log("Cleared existing market stats data.");
+    logger.info("Cleared existing market stats data.");
 
     for (const marketStat of marketStats) {
         var result = await insertMarketStats(marketStat);
-        // console.log("Inserted market stats: ", result);
+        // logger.info("Inserted market stats: ", result);
     }
 }
 
 async function updateSectorStats(sectorStats) {
     await sql`delete from DAILY_SECTORS_STATS;`; // Clear existing data
-    console.log("Cleared existing sector stats data.");
+    logger.info("Cleared existing sector stats data.");
 
     for (const sectorStat of sectorStats) {
         var result = await insertSectorStats(sectorStat);
-        // console.log("Inserted market stats: ", result);
+        // logger.info("Inserted market stats: ", result);
     }
 }
 
 async function updateDailyStockStats(dailyStockStats) {
   await sql`delete from daily_stock_stats;`; // Clear existing data
-  console.log("Cleared existing daily stock stats data.");
+  logger.info("Cleared existing daily stock stats data.");
 
   for (const dailyStockStat of dailyStockStats) {
     try {
       var result = await insertDailyStockStats(dailyStockStat);
-      // console.log("Inserted daily stock stats: ", result);
+      // logger.info("Inserted daily stock stats: ", result);
     } catch (err) {
-      console.error('Database error:', err);
-      console.log("Inserted daily stock stats: ", dailyStockStat);
+      logger.error('Database error:', err);
+      logger.info("Inserted daily stock stats: ", dailyStockStat);
     }
   }
 }

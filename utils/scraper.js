@@ -1,6 +1,7 @@
 require('dotenv').config();
+const logger = require('./logger')
 const { ANALYST_DATA_INI } = process.env;
-console.log("ANALYST_DATA_INI = ", ANALYST_DATA_INI);
+logger.info("ANALYST_DATA_INI = ", ANALYST_DATA_INI);
 
 const axios = require('axios');
 const cheerio = require('cheerio');
@@ -113,7 +114,7 @@ async function parseHkexFile(filePath) {
 
     // Example: Get the title of the page
     const pageTitle = $('title').text();
-    // console.log(`Page Title: ${pageTitle}`);
+    // logger.info(`Page Title: ${pageTitle}`);
 
     // Example: Get all fonts from the page
     const fonts = [];
@@ -127,11 +128,11 @@ async function parseHkexFile(filePath) {
     stringStream.push(null); // Indicate end of stream
 
     // await writeFileAsync(outputFilePath, fonts.join());
-    // console.log(`File written to ${outputFilePath}`);
+    // logger.info(`File written to ${outputFilePath}`);
     var {quoteDate, prices} = await processLineByLine(stringStream);
     await sqliteHelper.insertDailyStockPrice(prices);
 
-    console.log(`[${filePath}] ${quoteDate} : ${prices.length}`);;
+    logger.info(`[${filePath}] ${quoteDate} : ${prices.length}`);;
 }
 
 /**
@@ -142,9 +143,9 @@ async function parseHkexFile(filePath) {
 async function writeFileAsync(filePath, content) {
     try {
         await fs.promises.writeFile(filePath, content, 'utf-8');
-        // console.log(`File "${filePath}" has been successfully written.`);
+        // logger.info(`File "${filePath}" has been successfully written.`);
     } catch (error) {
-        console.error(`Error writing to file "${filePath}": ${error.message}`);
+        logger.error(`Error writing to file "${filePath}": ${error.message}`);
     }
 }
 
@@ -255,7 +256,7 @@ function searchQuoteDate(line) {
         const day = match[1];
         const month = match[2];
         const year = match[3];
-        // console.log(`Quote date found: ${day} ${month} ${year}`);
+        // logger.info(`Quote date found: ${day} ${month} ${year}`);
         const momentObject = moment(`${day}/${month}/${year}`, 'DD/MMM/YYYY');
         if (momentObject.isValid()) {
             return momentObject.format('YYYYMMDD');
@@ -274,7 +275,7 @@ function searchQuoteDate(line) {
  */
 function processSalesRecords(symbol, salesRecords, prices) {
     const text = salesRecords.join().replace(/,/g, '');
-    // console.log(`Text: ${text}`);
+    // logger.info(`Text: ${text}`);
     const regex = [/\<(.+?)\>/g, /\[(.+?)\]/g];
 
     var index = 0;
@@ -322,9 +323,9 @@ function processSalesRecords(symbol, salesRecords, prices) {
         open = auctionSession[1].split('-')[1];
     }
 
-    // console.log(`${symbol} / ${open} : ${auctionSession} / ${normalSession}`);
+    // logger.info(`${symbol} / ${open} : ${auctionSession} / ${normalSession}`);
     // if(auctionSession.length <= 0 && normalSession.length <= 0) {
-    //    console.log(`${text}`);
+    //    logger.info(`${text}`);
     // }
 
     var formattedSymbol = helper.reformatSymbolForHK(symbol + '.HK');
@@ -341,9 +342,9 @@ function processSalesRecords(symbol, salesRecords, prices) {
  * @returns 
  */
 function process2Lines(prices, previousLine, currentLine, quoteDate) {
-    // console.log(previousLine);
-    // console.log(currentLine);
-    // console.log('-------------------------');
+    // logger.info(previousLine);
+    // logger.info(currentLine);
+    // logger.info('-------------------------');
 
     if (helper.isEmpty(previousLine)) {
         return;
@@ -388,12 +389,12 @@ async function traverseDir() {
     const regex = /^d(\d{6})e\.htm$/; // Example regex for matching files like d250627e.htm
 
     if (!fs.existsSync(hkexPath)) {
-        console.error("Directory does not exist: " + hkexPath);
+        logger.error("Directory does not exist: " + hkexPath);
         return false;
     } else {
-        console.log("Directory exists: " + hkexPath);
+        logger.info("Directory exists: " + hkexPath);
         const files = helper.traverseDirectory(hkexPath, regex);
-        console.log(`Found ${files.length} files to process.`);
+        logger.info(`Found ${files.length} files to process.`);
         await Promise.all(
             files.map(async (file) => {
                 const match = regex.exec(file.file);
