@@ -9,8 +9,8 @@ const ini = require('ini');
 const fs = require('fs');
 const formularjs = require('@formulajs/formulajs');
 const dfd = require("danfojs");
-const minimist = require('minimist');
 const { performance } = require('perf_hooks');
+const { SMA } = require('trading-signals');
 
 const analystConfig = ini.parse(fs.readFileSync(ANALYST_DATA_INI, 'utf-8'));
 const sqliteDb = require('better-sqlite3')(analystConfig.SQLITE.FILE, {});
@@ -21,8 +21,9 @@ const logger = require('./logger')
 
 const queryDate = ''; // = '20260730'
 const querySymbol = '' // '2697.HK';
-const queryStartDate = '20260821'; // '20260730'
+const queryStartDate = '20260820'; // '20260730'
 const queryEndDate = '20260821'; // '20260730'
+const dataOverwrite = true;
 
 /**
  * Main entry point for processing data
@@ -42,7 +43,7 @@ function processDataLocal() {
     } else if (!helper.isEmpty(queryDate)) {
         sqliteProcessSingleDate(queryDate);
     } else if (!helper.isEmpty(queryStartDate) && !helper.isEmpty(queryEndDate)) {
-        sqliteProcessMultipleDatesByEndDate(queryStartDate, queryEndDate);
+        sqliteProcessMultipleDatesByEndDate(queryStartDate, queryEndDate, dataOverwrite);
     } else {
         sqliteProcessMultipleDates();
     }
@@ -53,20 +54,27 @@ function processDataLocal() {
 /**
  * Process all dates in the database
  */
-function sqliteProcessMultipleDatesByEndDate(queryStartDate, queryEndDate) {
+function sqliteProcessMultipleDatesByEndDate(queryStartDate, queryEndDate, overwrite = false) {
     // query db
-    const sqlDateStr = `
+    var sqlDateStr = `
         select dt from ( 
             SELECT dt FROM DAILY_STOCK_PRICE 
             where dt between ? and ?
             group by dt 
             order by dt desc 
-        ) 
-        except 
-        select dt from daily_stock_stats group by dt`;
+        ) `
+
+    if(!overwrite) {
+        sqlDateStr = sqlDateStr + `    
+            except 
+            select dt from daily_stock_stats group by dt`;
+    }
+
+    sqlDateStr = sqlDateStr + ` order by dt`;
 
     const dateStmt = sqliteDb.prepare(sqlDateStr);
     const dates = dateStmt.all(queryStartDate, queryEndDate);
+    logger.info(`Dates to be re-calculate : ${dates.length}`);
     sqliteProcessDates(dates);
 }
 
@@ -130,28 +138,42 @@ function sqliteProcessSingleDate(queryDate, querySymbol) {
     const slopeSMA50List = [];
     const slopeSMA150List = [];
     const warningList = [];
+    const longTermList = [];
+    const mediumTermList = [];
+    const shortTermList = [];
 
     for (const symbol of symbols) {
         var priceStats = calculateStatistics(symbol, queryDate, warningList);
         priceStatsList.push(priceStats);
 
         // append to list for normalization
-        priceOverSMA20List.push(priceStats.rs_priceOverSMA20);
-        slopeSMA20List.push(priceStats.rs_slopeSMA20);
-        slopeSMA50List.push(priceStats.rs_slopeSMA50);
-        slopeSMA150List.push(priceStats.rs_slopeSMA150);
+        priceOverSMA20List.push(priceStats.priceOverSMA20);
+        slopeSMA20List.push(priceStats.slopeSMA20);
+        slopeSMA50List.push(priceStats.slopeSMA50);
+        slopeSMA150List.push(priceStats.slopeSMA150);
+
+        // sctr
+        longTermList.push(priceStats.ema200pref + priceStats.roc125sctr);
+        mediumTermList.push(priceStats.ema50pref + priceStats.roc20sctr);
+        shortTermList.push(priceStats.ppo01sctr + priceStats.rsi14sctr);
     }
 
     // warning list
-    logger.info("warning list for " + queryDate + " : " + warningList.length);
+
     let df = new dfd.DataFrame(warningList)
-    df.print(); 
+    const summaryDf = df.toString();
+    logger.info(`warning list for [${queryDate}] : ${warningList.length}`);    
+    logger.info(`\n${summaryDf.toString()}`);    
     
     if(priceStatsList.length <= 0) {
         return 0;
     }
     
-    normalizeRelativeStrength(priceStatsList, priceOverSMA20List, slopeSMA20List, slopeSMA50List, slopeSMA150List);
+    normalizeRelativeStrength(
+        queryDate, priceStatsList, 
+        priceOverSMA20List, slopeSMA20List, slopeSMA50List, slopeSMA150List,
+        longTermList, mediumTermList, shortTermList
+    );
 
     const rsOver50 = [];
     priceStatsList.map((priceStats) => {
@@ -197,7 +219,9 @@ function calculateStatistics(stockPrice, queryDate, warningList) {
         macd01Ind: new taIndicator.MACD(12, 26, 9),
         sma010TurnoverInd: new taIndicator.SMA(10),
         sma020TurnoverInd: new taIndicator.SMA(20),
-        sma050TurnoverInd: new taIndicator.SMA(50)
+        sma050TurnoverInd: new taIndicator.SMA(50),
+        sma20adr: new SMA(20), // 20-period lookback
+        sma05adr: new SMA(5) // 5-period lookback
     };
 
     var priceStats = 
@@ -267,6 +291,10 @@ function calculateStatistics(stockPrice, queryDate, warningList) {
         rs_slopeSMA20: 0,
         rs_slopeSMA50: 0,
         rs_slopeSMA150: 0,
+        priceOverSMA20: 0,
+        slopeSMA20: 0,
+        slopeSMA50: 0,
+        slopeSMA150: 0,
     }
 
     // calculate technical indicators
@@ -284,35 +312,52 @@ function calculateStatistics(stockPrice, queryDate, warningList) {
     return priceStats;
 }
 
-function normalizeRelativeStrength(priceStatsList, priceOverSMA20List, slopeSMA20List, slopeSMA50List, slopeSMA150List) {
+function normalizeRelativeStrength(queryDate, priceStatsList, 
+    priceOverSMA20List, slopeSMA20List, slopeSMA50List, slopeSMA150List, 
+    longTermList, mediumTermList, shortTermList) {
     // Load and describe the distribution
     let data =
     {
         'priceOverSMA20List': priceOverSMA20List,
         'slopeSMA20List': slopeSMA20List,
         'slopeSMA50List': slopeSMA50List,
-        'slopeSMA150List': slopeSMA150List
+        'slopeSMA150List': slopeSMA150List,
+        'longTermList': longTermList,
+        'mediumTermList': mediumTermList,
+        'shortTermList': shortTermList
     }
 
-    logger.info("Data distribution before normalization:");
     let df = new dfd.DataFrame(data)
-    df.describe().print(); 
+    var summaryDf = df.describe();
+    logger.info(`Data distribution for [${queryDate}] before normalization:\n${summaryDf.toString()}`);
 
     const startTime = performance.now();
     const relativeStrengthList = [];
+    const sctrList = [];
     priceStatsList.map(ps => {
         try {
-            ps.rs_priceOverSMA20 = formularjs.PERCENTRANKINC(priceOverSMA20List, ps.rs_priceOverSMA20, 2) * 100;
-            ps.rs_slopeSMA20 = formularjs.PERCENTRANKINC(slopeSMA20List, ps.rs_slopeSMA20, 2) * 100;
-            ps.rs_slopeSMA50 = formularjs.PERCENTRANKINC(slopeSMA50List, ps.rs_slopeSMA50, 2) * 100;
-            ps.rs_slopeSMA150 = formularjs.PERCENTRANKINC(slopeSMA150List, ps.rs_slopeSMA150, 2) * 100;
+            // relative strength
+            ps.rs_priceOverSMA20 = formularjs.PERCENTRANKINC(priceOverSMA20List, ps.priceOverSMA20, 2) * 100;
+            ps.rs_slopeSMA20 = formularjs.PERCENTRANKINC(slopeSMA20List, ps.slopeSMA20, 2) * 100;
+            ps.rs_slopeSMA50 = formularjs.PERCENTRANKINC(slopeSMA50List, ps.slopeSMA50, 2) * 100;
+            ps.rs_slopeSMA150 = formularjs.PERCENTRANKINC(slopeSMA150List, ps.slopeSMA150, 2) * 100;
 
             ps.normalise_rs = 0.05 * ps.rs_priceOverSMA20 + 
                               0.05 * ps.rs_slopeSMA20 + 
                               0.4 * ps.rs_slopeSMA50 + 
                               0.5 * ps.rs_slopeSMA150;
 
+            // sctr
+            const longTerm = formularjs.PERCENTRANKINC(longTermList, ps.ema200pref + ps.roc125sctr, 2) * 100;
+            const mediumTerm = formularjs.PERCENTRANKINC(mediumTermList, ps.ema50pref + ps.roc20sctr, 2) * 100;
+            const shortTerm = formularjs.PERCENTRANKINC(shortTermList, ps.ppo01sctr + ps.rsi14sctr, 2) * 100;
+
+            ps.sctr = 0.60 * longTerm + 
+                      0.30 * mediumTerm + 
+                      0.10 * shortTerm;                   
+
             relativeStrengthList.push(ps.normalise_rs);
+            sctrList.push(ps.sctr);
         } catch (error) {
             logger.info("[ERROR STEP 1] " + ps.symbol + " error: " + error);
         }
@@ -321,6 +366,7 @@ function normalizeRelativeStrength(priceStatsList, priceOverSMA20List, slopeSMA2
     priceStatsList.map(ps => {
         try {
             ps.normalise_rs_v2 = formularjs.PERCENTRANKINC(relativeStrengthList, ps.normalise_rs, 2) * 100;
+            ps.sctr = formularjs.PERCENTRANKINC(sctrList, ps.sctr, 2) * 100;
         } catch (error) {
             logger.info("[ERROR STEP 2] " + ps.symbol + " error: " + error);
         }
@@ -335,12 +381,13 @@ function normalizeRelativeStrength(priceStatsList, priceOverSMA20List, slopeSMA2
         'slopeSMA50List': priceStatsList.map(item => item.rs_slopeSMA50),
         'slopeSMA150List': priceStatsList.map(item => item.rs_slopeSMA150),
         'normalise_rs': priceStatsList.map(item => item.normalise_rs),
-        'normalise_rs_v2': priceStatsList.map(item => item.normalise_rs_v2)
+        'normalise_rs_v2': priceStatsList.map(item => item.normalise_rs_v2),
+        'sctr': priceStatsList.map(item => item.sctr),
     }
 
-    logger.info(`Normalize 處理總共花費了 ${duration.toFixed(2)} 毫秒。`);
     df = new dfd.DataFrame(data)
-    df.describe().print(); 
+    summaryDf = df.describe();
+    logger.info(`Normalize for [${queryDate}] 處理總共花費了 ${duration.toFixed(2)} 毫秒。\n${summaryDf.toString()}`);
 }
 
 function calculateRelativeStrength(priceHistory, priceStats, priceStatsHistory, warningList) {
@@ -373,10 +420,10 @@ function calculateRelativeStrength(priceHistory, priceStats, priceStatsHistory, 
         priceOverSMA20 = 0;   
     } 
 
-    priceStats.rs_priceOverSMA20 = priceOverSMA20;
-    priceStats.rs_slopeSMA20 = slopeSMA20;
-    priceStats.rs_slopeSMA50 = slopeSMA50;
-    priceStats.rs_slopeSMA150 = slopeSMA150;
+    priceStats.priceOverSMA20 = priceOverSMA20;
+    priceStats.slopeSMA20 = slopeSMA20;
+    priceStats.slopeSMA50 = slopeSMA50;
+    priceStats.slopeSMA150 = slopeSMA150;
 }
 
 function calculateSMASlope(priceHistory, priceStats, priceStatsHistory, smaPeriod = 20, targetKey1 = 'sma020', targetKey2 = 'sma20') {
@@ -455,6 +502,7 @@ function calculateTechnicalIndicator(priceHistory, priceStats, calculators) {
         if (priceHistory.length >= 5) {
             priceStats.sma05 = calculators.sma005Ind.nextValue(history.close);
             priceStats.close >= priceStats.sma05 ? priceStats.above_5d_sma = 1 : priceStats.above_5d_sma = 0;
+            calculators.sma05adr.update(history.high - history.low);
         }
 
         if (priceHistory.length >= 10) {
@@ -465,6 +513,7 @@ function calculateTechnicalIndicator(priceHistory, priceStats, calculators) {
         if (priceHistory.length >= 20) {
             priceStats.sma20 = calculators.sma020Ind.nextValue(history.close);
             priceStats.sma20turnover = calculators.sma020TurnoverInd.nextValue(history.close * history.volume);
+            calculators.sma20adr.update(history.high - history.low); 
         }
 
         if (priceHistory.length >= 50) {
@@ -513,6 +562,16 @@ function calculateTechnicalIndicator(priceHistory, priceStats, calculators) {
 
         lastQuote = history;
     });
+
+    if (calculators.sma20adr.isStable) {
+        // logger.info(`${priceStats.symbol} / ADR : ${calculators.sma20adr.getResult().toFixed(4)}`);
+        priceStats.adr20 = calculators.sma20adr.getResult().toFixed(4);
+    }
+
+    if (calculators.sma05adr.isStable) {
+        // logger.info(`${priceStats.symbol} / ADR : ${calculators.sma05adr.getResult().toFixed(4)}`);
+        priceStats.adr05 = calculators.sma05adr.getResult().toFixed(4);
+    }    
 
     // above? sma
     priceStats.close >= priceStats.sma10 ? priceStats.above_10d_sma = 1 : priceStats.above_10d_sma = 0;
@@ -587,7 +646,11 @@ function calculateSctr(priceStats) {
     priceStats.ppo01sctr = calculatePPO01(priceStats);
 
     // sum up values
-    priceStats.sctr = (0.60 * (priceStats.ema200pref + priceStats.roc125sctr) + 0.30 * (priceStats.ema50pref + priceStats.roc20sctr) + 0.10 * (priceStats.ppo01sctr + priceStats.rsi14sctr));
+    priceStats.sctr = (
+        0.60 * (priceStats.ema200pref + priceStats.roc125sctr) + 
+        0.30 * (priceStats.ema50pref + priceStats.roc20sctr) + 
+        0.10 * (priceStats.ppo01sctr + priceStats.rsi14sctr)
+    );
 }
 
 /**

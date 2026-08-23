@@ -1,4 +1,5 @@
 cd "C:\Users\user\Documents\GitHub\sqlite-hkex-express"
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
 # Define log file path and script paths
 $LogFile       = ".\temp\run-scripts.log"
