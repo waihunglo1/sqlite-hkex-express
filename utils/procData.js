@@ -21,8 +21,8 @@ const logger = require('./logger')
 
 const queryDate = ''; // = '20260730'
 const querySymbol = '' // '2697.HK';
-const queryStartDate = ''; // '20260730'
-const queryEndDate = ''; // '20260730'
+const queryStartDate = '20260821'; // '20260730'
+const queryEndDate = '20260821'; // '20260730'
 
 /**
  * Main entry point for processing data

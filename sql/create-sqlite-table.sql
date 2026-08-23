@@ -175,62 +175,10 @@ ALTER TABLE DAILY_STOCK_STATS ADD COLUMN rs_slopeSMA20 real;
 ALTER TABLE DAILY_STOCK_STATS ADD COLUMN rs_slopeSMA50 real;
 ALTER TABLE DAILY_STOCK_STATS ADD COLUMN rs_slopeSMA150 real;
 
-select * from "DAILY_STOCK_STATS"
-where dt = '20260710'
-
-select dt from daily_stock_stats where dt >= '20260101'
-
-delete from daily_stock_stats where dt >= '20260101'
-
-select * from "STOCK"
-order by last_updated desc 
-where symbol = '2715.HK'
-
-select * from "STOCK"
-order by last_updated desc
-
-            select 
-                stock.sector, DAILY_STOCK_STATS.dt,
-                sum(case when chg_pct_1d >= 4 then 1 else 0 end)  up4pct1d  , 
-                sum(case when chg_pct_1d<= -4 then 1 else 0 end)  dn4pct1d ,
-                sum(case when chg_pct_1d > 0  then 1 else 0 end)  up0pct1d ,
-                sum(case when chg_pct_1d < 0 then 1 else 0 end)  dn0pct1d ,
-                sum(case when chg_pct_1d < 0 then 1 else 0 end)  dn0pct1d ,
-                count(1) tot
-            from stock, DAILY_STOCK_STATS
-            where stock.symbol = DAILY_STOCK_STATS.symbol
-            and sector != 'UNKNOWN'
-            group by stock.sector, DAILY_STOCK_STATS.dt
-            order by sector
-
-            select 
-                stock.sector, DAILY_STOCK_STATS.dt,
-                avg(normalise_rs), min(normalise_rs), max(normalise_rs), count(1) tot
-            from stock, DAILY_STOCK_STATS
-            where stock.symbol = DAILY_STOCK_STATS.symbol
-            and sector != 'UNKNOWN'
-            and normalise_rs > 50
-            group by stock.sector, DAILY_STOCK_STATS.dt
-            order by DAILY_STOCK_STATS.dt desc,    stock.sector    
-
-            select *
-            from stock, DAILY_STOCK_STATS
-            where stock.symbol = DAILY_STOCK_STATS.symbol
-            and sector != 'UNKNOWN'
-            and rs > 50
-            and sector = 'Financial Services'
-            and dt = '20260717'
-                 
-
-select dt from ( 
-            SELECT dt FROM DAILY_STOCK_PRICE 
-            group by dt 
-            order by dt desc 
-            limit 200 
-        ) 
-        except 
-        select dt from daily_stock_stats group by dt
-        ;                 
+ALTER TABLE DAILY_STOCK_STATS ADD COLUMN priceOverSMA20 real;
+ALTER TABLE DAILY_STOCK_STATS ADD COLUMN slopeSMA20 real;
+ALTER TABLE DAILY_STOCK_STATS ADD COLUMN slopeSMA50 real;
+ALTER TABLE DAILY_STOCK_STATS ADD COLUMN slopeSMA150 real;      
 
 CREATE VIEW IF NOT EXISTS HK_INDICES AS
 select hsi.dt, hsi, hsce from 

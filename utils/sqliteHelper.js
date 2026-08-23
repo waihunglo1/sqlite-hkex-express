@@ -123,12 +123,14 @@ function insertPriceStats(priceStats) {
       sma20turnover, sma50turnover, above_200d_sma ,above_150d_sma ,above_100d_sma ,above_50d_sma, 
       above_20d_sma ,above_10d_sma ,above_5d_sma,
       vp_high, vp_low, vp_bullish, vp_bearish,
-      rs, normalise_rs, rs_priceOverSMA20, rs_slopeSMA20, rs_slopeSMA50, rs_slopeSMA150
+      rs, normalise_rs, rs_priceOverSMA20, rs_slopeSMA20, rs_slopeSMA50, rs_slopeSMA150,
+      priceOverSMA20, slopeSMA20, slopeSMA50, slopeSMA150
       )   
       VALUES 
       (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
       ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-      ?, ?, ?, ?, ?, ?
+      ?, ?, ?, ?, ?, ?, 
+      ?, ?, ?, ?
       )`;
 
     const stmt = sqliteDb.prepare(INSERT_SQL);
@@ -147,7 +149,8 @@ function insertPriceStats(priceStats) {
         priceStats.above_50d_sma, priceStats.above_20d_sma, priceStats.above_10d_sma, priceStats.above_5d_sma,
         priceStats.vp_high, priceStats.vp_low, priceStats.vp_bullish, priceStats.vp_bearish,
         priceStats.rs, priceStats.normalise_rs, priceStats.rs_priceOverSMA20, priceStats.rs_slopeSMA20, 
-        priceStats.rs_slopeSMA50, priceStats.rs_slopeSMA150
+        priceStats.rs_slopeSMA50, priceStats.rs_slopeSMA150,
+        priceStats.priceOverSMA20, priceStats.slopeSMA20, priceStats.slopeSMA50, priceStats.slopeSMA150
     );
 
     if (info.changes <= 0) {
