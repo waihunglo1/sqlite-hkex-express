@@ -1,8 +1,5 @@
 require('dotenv').config();
 const logger = require('./logger')
-const { ANALYST_DATA_INI } = process.env;
-logger.info("ANALYST_DATA_INI = ", ANALYST_DATA_INI);
-
 const axios = require('axios');
 const cheerio = require('cheerio');
 const https = require('https');
@@ -16,6 +13,8 @@ const ini = require('ini');
 const sqliteHelper = require('./sqliteHelper.js');
 
 // Read and parse synchronously
+const { ANALYST_DATA_INI } = process.env;
+logger.info(`ANALYST_DATA_INI = ${ANALYST_DATA_INI}`);
 const analystConfig = ini.parse(fs.readFileSync(ANALYST_DATA_INI, 'utf-8'));
 
 // local modules
@@ -390,7 +389,6 @@ async function traverseDir() {
 
     if (!fs.existsSync(hkexPath)) {
         logger.error("Directory does not exist: " + hkexPath);
-        return false;
     } else {
         logger.info("Directory exists: " + hkexPath);
         const files = helper.traverseDirectory(hkexPath, regex);
@@ -404,8 +402,6 @@ async function traverseDir() {
                 }
             })
         );
-
-        return true;
     }
 }
 

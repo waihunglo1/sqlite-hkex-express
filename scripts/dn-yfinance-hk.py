@@ -1,15 +1,19 @@
 import yfinance as yf
 import pandas as pd
-from yahooquery import Ticker
 import configparser
 import sqlite3
 import os
-from pathlib import Path
 import logging
 import time
 import random
 import math
+import sys
 import translatorhelper as translator
+
+# Import the class from your utility file
+from sqlitehelper import SqliteDbHelper
+from yahooquery import Ticker
+from pathlib import Path
 
 # 1. 設定日誌格式：包含 [時間] [層級] 檔案名稱:行數 - 訊息
 logging.basicConfig(
@@ -44,7 +48,7 @@ def tickersFromXls(hkexConfig):
     # tickerList = filterDf.iloc[:, 0].tolist()
     return column_hashmap
 
-def yahooQuery(tickerBatch, errorRecords, tickerMap):
+def doYahooQuery(sqliteDbHelper, tickerBatch, errorRecords, tickerMap):
     tickers = Ticker(tickerBatch, country="hong kong")
 
     # 1. 獲取數據
@@ -77,40 +81,13 @@ def yahooQuery(tickerBatch, errorRecords, tickerMap):
 
     # update sqlite
     if len(records) > 0:
-        updated = insertOrReplace(records)
+        updated = sqliteDbHelper.insertOrReplaceStockInfo(records)
         # logging.info(f"Changed Row: {updated} data size: {len(records)}")
         return updated
 
     return 0
 
-def insertOrReplace(records):
-    df = pd.DataFrame(records)
-    # logging.info("\n" + df.to_markdown(index=False).rstrip)
-
-    updated = 0
-    try:
-        with sqlite3.connect(sqliteFile, timeout=10) as conn:
-            cursor = conn.cursor()
-        
-            # Use SQLite "INSERT OR REPLACE" logic row-by-row
-            for _, row in df.iterrows():
-                cursor.execute('''
-                    REPLACE INTO STOCK (symbol,name,industry,sector,market_cap) VALUES (?, ?, ?, ?, ?)
-                ''', (row['symbol'], row['name'], row['industry'], row['sector'], row['marketCap']))
-                # 📜 獲取受影響的行數
-                updated += cursor.rowcount
-            
-            conn.commit()
-    except sqlite3.Error as e:
-        logging.error(f"❌ ⚫ 其他 SQLite 錯誤: {e}")
-        exit
-    except Exception as e:
-        logging.error(f"❌ ⚪ 未知錯誤: {e}")
-        exit
-
-    return updated
-
-def yahooQueryStockInfoToSqlite(tickerMap):
+def yahooQueryStockInfo(sqliteDbHelper, tickerMap):
     # Split ticker_list into batches of 100 items
     errorRecords = []
     batch_size = 100
@@ -120,12 +97,53 @@ def yahooQueryStockInfoToSqlite(tickerMap):
 
     for i in range(0, len(tickerList), batch_size):
         tickerBatch = tickerList[i : i + batch_size]
-        updated += yahooQuery(tickerBatch,errorRecords,tickerMap)
+        updated += doYahooQuery(sqliteDbHelper, tickerBatch, errorRecords, tickerMap)
         sleep = random.uniform(1, 10)
-        logging.info(f"Updated : {updated} / {len(tickerList)} / Error Records : {len(errorRecords)} / sleep : {sleep:.2f}")
+        logging.info(f"DB Updated : {updated} / {len(tickerList)} / Error Records : {len(errorRecords)} / sleep : {sleep:.2f}")
         time.sleep(sleep)
 
     return errorRecords
+
+def loadIndexDataByYahooFinance(sqliteDbHelper):
+    indexes = ["^HSI", "^HSCE"]
+    start_date = "2006-10-13"
+
+    for index_symbol in indexes:
+        df = yf.download(
+            index_symbol,
+            start=start_date,
+            interval="1d",
+            progress=False,
+            multi_level_index=False,  # Forces 1D columns
+        )
+
+        if df.empty:
+            continue
+
+        df = df.reset_index()
+
+        # Vectorized column mapping
+        records = pd.DataFrame(
+            {
+                "symbol": index_symbol,
+                "period": "D",
+                "dt": df["Date"].dt.strftime("%Y%m%d"),
+                "tm": "000000",
+                "open": df["Open"],
+                "high": df["High"],
+                "low": df["Low"],
+                "close": df["Close"],
+                "volume": df["Volume"],
+                "adj_close": df["Close"],
+                "open_int": 0,
+            }
+        )
+
+        logging.info("\n" + records.tail(5).to_string())
+
+        rows = records.to_dict(orient="records")
+        updatedRows = sqliteDbHelper.insertDailyStockPrice(rows)
+        logging.info(f"Yahoo indexes Processed[{index_symbol}] : {len(rows)} / Updated : {updatedRows}")
 
 #
 # Main Program
@@ -136,14 +154,18 @@ config = configparser.ConfigParser()
 config.read('config/analyst-data-hk.ini', encoding='utf-8')
 sqliteFile = config['SQLITE']['FILE']
 logging.info(f"SQLITE : {sqliteFile}") 
+sqliteDbHelper = SqliteDbHelper(sqliteFile)
 
 # read xls
 hkexConfig = config['HKEX']
 tickerMap = tickersFromXls(hkexConfig)
 logging.info(f"SIZE : {len(tickerMap)}")
 
+# load index data
+loadIndexDataByYahooFinance(sqliteDbHelper)
+
 # Split ticker_list into batches of items
-errorRecords = yahooQueryStockInfoToSqlite(tickerMap)
+errorRecords = yahooQueryStockInfo(sqliteDbHelper, tickerMap)
 if len(errorRecords) > 0:
     df = pd.DataFrame(errorRecords)
     logging.info("\n" + df.to_markdown(index=False).strip())  

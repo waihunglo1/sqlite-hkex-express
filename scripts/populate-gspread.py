@@ -37,15 +37,28 @@ logging.info(f"SQLITE : {sqliteFile}")
 def _publish_with_retry(df, file, tabName):
     gspreadUtil.publish_gsheet(df, file, tabName)
 
+def moveColumns(df, moveColsToEnd):
+    colNames = util.splitStringToArray(moveColsToEnd) or []
+    if len(colNames) > 0:
+        for colName in colNames:
+            col = df.pop(colName)
+            df[colName] = col
+        df = df.copy()
+
 def populate(config, id):
     sql = config[id]['SQL']
     tabName = config[id]['TAB_NAME']
     file = config[id]['FILE']
     funcName = config[id]['FUNCTION_NAME']
     df = sqliteUtil.fetch_and_populate(sqliteFile, sql, funcName)
+
+    moveColsToEnd = config[id]['MOVE_COLS_TO_END']
+    moveColumns(df, moveColsToEnd)
+
     _publish_with_retry(df,file,tabName)
 
 if __name__ == "__main__":
     populate(config,'GOOGLE-SPREADSHEET-01')
     populate(config,'GOOGLE-SPREADSHEET-02')
+
 

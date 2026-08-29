@@ -19,11 +19,11 @@ const helper = require("./helper.js");
 const sqliteHelper = require('./sqliteHelper.js');
 const logger = require('./logger')
 
-const queryDate = ''; // = '20260730'
+const queryDate = '20260828'; // = '20260730'
 const querySymbol = '' // '2697.HK';
-const queryStartDate = '20260820'; // '20260730'
-const queryEndDate = '20260821'; // '20260730'
-const dataOverwrite = true;
+const queryStartDate = ''; // '20260730'
+const queryEndDate = ''; // '20260730'
+const dataOverwrite = false;
 
 /**
  * Main entry point for processing data
@@ -295,6 +295,10 @@ function calculateStatistics(stockPrice, queryDate, warningList) {
         slopeSMA20: 0,
         slopeSMA50: 0,
         slopeSMA150: 0,
+        slopeAdr05: 0,
+        slopeAdr20: 0,
+        adr05: 0,
+        adr20: 0
     }
 
     // calculate technical indicators
@@ -391,9 +395,15 @@ function normalizeRelativeStrength(queryDate, priceStatsList,
 }
 
 function calculateRelativeStrength(priceHistory, priceStats, priceStatsHistory, warningList) {
+    // sma
     const slopeSMA20 = calculateSMASlope(priceHistory, priceStats, priceStatsHistory, 20, 'sma020', 'sma20');
     const slopeSMA50 = calculateSMASlope(priceHistory, priceStats, priceStatsHistory, 50, 'sma050', 'sma50');
     const slopeSMA150 = calculateSMASlope(priceHistory, priceStats, priceStatsHistory, 150, 'sma150', 'sma150');
+
+    // adr
+    const slopeAdr05 = calculateSMASlope(priceHistory, priceStats, priceStatsHistory, 5, 'adr05', 'adr05');
+    const slopeAdr20 = calculateSMASlope(priceHistory, priceStats, priceStatsHistory, 5, 'adr20', 'adr20');
+
     var priceOverSMA20 = 0;
 
     if(priceStats.sma20 > 0) {
@@ -424,12 +434,15 @@ function calculateRelativeStrength(priceHistory, priceStats, priceStatsHistory, 
     priceStats.slopeSMA20 = slopeSMA20;
     priceStats.slopeSMA50 = slopeSMA50;
     priceStats.slopeSMA150 = slopeSMA150;
+    priceStats.slopeAdr05 = slopeAdr05;
+    priceStats.slopeAdr20 = slopeAdr20;
 }
 
 function calculateSMASlope(priceHistory, priceStats, priceStatsHistory, smaPeriod = 20, targetKey1 = 'sma020', targetKey2 = 'sma20') {
-
     // first 19 priceStatsHistory
     const sma20Data = priceStatsHistory.slice(0,smaPeriod - 1).map((prcStats, index) => [prcStats.dt, prcStats[targetKey1]]);
+
+    // latest priceStats
     sma20Data.unshift([priceStats.dt, priceStats[targetKey2]]);
     const dataForSlope = sma20Data.reverse().map((data, index) => [index , data[1]]);
 
@@ -565,12 +578,12 @@ function calculateTechnicalIndicator(priceHistory, priceStats, calculators) {
 
     if (calculators.sma20adr.isStable) {
         // logger.info(`${priceStats.symbol} / ADR : ${calculators.sma20adr.getResult().toFixed(4)}`);
-        priceStats.adr20 = calculators.sma20adr.getResult().toFixed(4);
+        priceStats.adr20 = calculators.sma20adr.getResult();
     }
 
     if (calculators.sma05adr.isStable) {
         // logger.info(`${priceStats.symbol} / ADR : ${calculators.sma05adr.getResult().toFixed(4)}`);
-        priceStats.adr05 = calculators.sma05adr.getResult().toFixed(4);
+        priceStats.adr05 = calculators.sma05adr.getResult();
     }    
 
     // above? sma

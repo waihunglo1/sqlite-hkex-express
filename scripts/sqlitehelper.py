@@ -155,3 +155,57 @@ def fill_historical_normalize_rs(daily_stat, conn):
     # 動態寫入 daily_stat["normalise_rs1"] 到 daily_stat["normalise_rs20"]
     for i, val in enumerate(rs_list, start=1):
         daily_stat[f"normalise_rs{i}"] = val if val is not None else 0
+
+class SqliteDbHelper:
+    """Helper class for managing SQLite database operations."""
+
+    def __init__(self, db_path: str):
+        self.db_path = db_path
+
+    def insertDailyStockPrice(self, prices: list[dict]) -> int:
+        """Inserts or replaces daily stock prices in a single transaction.
+        
+        :return: Number of rows affected (inserted or replaced)
+        """
+        if not prices:
+            return 0
+
+        sql = """
+            INSERT OR REPLACE INTO DAILY_STOCK_PRICE (
+                symbol, period, dt, tm, open, high, low, close, volume, adj_close, open_int
+            ) VALUES (
+                :symbol, :period, :dt, :tm, :open, :high, :low, :close, :volume, :adj_close, :open_int
+            )
+        """
+
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.executemany(sql, prices)
+            return cursor.rowcount  # Returns the total affected rows
+
+    def insertOrReplaceStockInfo(self, records) -> int:
+        df = pd.DataFrame(records)
+        # logging.info("\n" + df.to_markdown(index=False).rstrip)
+
+        updated = 0
+        try:
+            with sqlite3.connect(self.db_path, timeout=10) as conn:
+                cursor = conn.cursor()
+            
+                # Use SQLite "INSERT OR REPLACE" logic row-by-row
+                for _, row in df.iterrows():
+                    cursor.execute('''
+                        REPLACE INTO STOCK (symbol,name,industry,sector,market_cap) VALUES (?, ?, ?, ?, ?)
+                    ''', (row['symbol'], row['name'], row['industry'], row['sector'], row['marketCap']))
+                    # 📜 獲取受影響的行數
+                    updated += cursor.rowcount
+                
+                conn.commit()
+        except sqlite3.Error as e:
+            logging.error(f"❌ ⚫ 其他 SQLite 錯誤: {e}")
+            exit
+        except Exception as e:
+            logging.error(f"❌ ⚪ 未知錯誤: {e}")
+            exit
+
+        return updated        

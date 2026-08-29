@@ -1,29 +1,18 @@
-const pino = require('pino');
-const syncDestination = pino.destination({ sync: true });
+const { createLogger, format, transports } = require('winston');
 
-const logger = pino({
+const logger = createLogger({
   level: process.env.LOG_LEVEL || 'info',
-
-  // Enable script name and line number tracking
-  caller: true,
-
-  // Format the timestamp to ISO
-  timestamp: pino.stdTimeFunctions.isoTime,
-
-  // Terminal output styling (Optional - for local development)
-  transport: process.env.NODE_ENV !== 'production'
-    ? {
-      target: 'pino-pretty',
-      options: {
-        colorize: true,
-        ignore: 'pid,hostname', // Hide process ID and hostname to keep output clean
-      }
-    }
-    : undefined
-},
-  syncDestination
-
-);
-
+  format: format.combine(
+    format.timestamp({ format: 'YYYY-MM-DDTHH:mm:ss.SSSZ' }),
+    format.colorize(),
+    format.printf(({ timestamp, level, message }) => {
+      return `[${timestamp}] ${level}: ${message}`;
+    })
+  ),
+  transports: [
+    // Standard console transport writes immediately to stdout
+    new transports.Console()
+  ]
+});
 
 module.exports = logger;

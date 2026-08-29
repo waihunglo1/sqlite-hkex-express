@@ -125,14 +125,14 @@ function insertPriceStats(priceStats) {
       vp_high, vp_low, vp_bullish, vp_bearish,
       rs, normalise_rs, rs_priceOverSMA20, rs_slopeSMA20, rs_slopeSMA50, rs_slopeSMA150,
       priceOverSMA20, slopeSMA20, slopeSMA50, slopeSMA150,
-      adr20, adr05
+      adr20, adr05, slopeAdr20, slopeAdr05
       )   
       VALUES 
       (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
       ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
       ?, ?, ?, ?, ?, ?, 
       ?, ?, ?, ?,
-      ?, ?
+      ?, ?, ?, ?
       )`;
 
     const stmt = sqliteDb.prepare(INSERT_SQL);
@@ -153,7 +153,7 @@ function insertPriceStats(priceStats) {
         priceStats.rs, priceStats.normalise_rs, priceStats.rs_priceOverSMA20, priceStats.rs_slopeSMA20, 
         priceStats.rs_slopeSMA50, priceStats.rs_slopeSMA150,
         priceStats.priceOverSMA20, priceStats.slopeSMA20, priceStats.slopeSMA50, priceStats.slopeSMA150,
-        priceStats.adr20, priceStats.adr05
+        priceStats.adr20, priceStats.adr05, priceStats.slopeAdr20, priceStats.slopeAdr05
     );
 
     if (info.changes <= 0) {

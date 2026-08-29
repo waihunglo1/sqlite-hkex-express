@@ -3,28 +3,8 @@ import os
 import certifi
 import logging
 from translate import Translator
+import pandas as pd
 
-import argostranslate.package
-import argostranslate.translate
-
-# Download and install language pair (e.g., English to Spanish)
-def install():
-
-    argostranslate.package.update_package_index()
-    available_packages = argostranslate.package.get_available_packages()
-    package_to_install = next(
-        filter(
-            lambda x: x.from_code == from_code and x.to_code == to_code, available_packages
-        )
-    )
-    argostranslate.package.install_from_path(package_to_install.download())
-
-# Translate instantly offline
-from_code = "en"
-to_code = "zh"
-install()
-translatedText = argostranslate.translate.translate("Hello World", from_code, to_code)
-print(translatedText)
 
 # 1. 設定日誌格式：包含 [時間] [層級] 檔案名稱:行數 - 訊息
 logging.basicConfig(
@@ -38,15 +18,21 @@ def dummy():
     sh = gc.open("HK-STOCKS-ANALYSIS-01")
     # sh.update_acell("A1", "Hello World")
 
-def translate():
-    # Set up the translator destination language
-    translator = Translator(to_lang="zh")
+def moveCol():
+    df = pd.DataFrame({"A": [1, 2], "B": [3, 4], "C": [5, 6]})
+    print(df.to_string())
 
-    # Translate text
-    translation = translator.translate("Electronic Gaming & Multimedia")
+    # 1. Move 'C' to the first position (Index 0)
+    col_c = df.pop("C")
+    df.insert(0, "C", col_c)
+    print(df.to_string())
 
-    print(translation)  # Output: Hola, ¿cómo estás?
-
+    # 2. Move 'A' to the last position
+    col_a = df.pop("A")
+    df["A"] = col_a
+    print(df.to_string())
 
 # translate()
 # dummy()    
+
+moveCol()
