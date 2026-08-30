@@ -14,13 +14,6 @@ from core import translator as translaterHelper
 from yahooquery import Ticker
 from pathlib import Path
 
-# 1. 設定日誌格式：包含 [時間] [層級] 檔案名稱:行數 - 訊息
-logging.basicConfig(
-    level=logging.INFO,  # 設定最低捕捉層級
-    format='%(asctime)s [%(levelname)s] %(filename)s:%(lineno)04d - %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'  # 精簡時間格式
-)
-
 def tickersFromXls(hkexConfig):
     downloadPath = hkexConfig['DOWNLOAD_PATH']
     fileName = hkexConfig['listOfSecurities']
@@ -61,11 +54,18 @@ def doYahooQuery(sqliteDbHelper, tickerBatch, errorRecords, tickerMap):
     for symbol in tickerBatch:
         try:
             tickerName = tickerMap.get(symbol,'NONE')
+            sector_en = profile_data[symbol].get("sector","UNKNOWN")
+            industry_en = profile_data[symbol].get("industry","UNKNOWN")
+            sector_zh = translaterHelper.financial_term(sector_en, "sector", symbol)
+            industry_zh = translaterHelper.financial_term(industry_en, "industry", symbol)
+
             records.append({
                 'symbol': symbol,
                 'name'  : quote[symbol].get("longName",tickerName),
-                'sector': translaterHelper.financial_term(profile_data[symbol].get("sector","NONE"), "sector", symbol),
-                'industry': translaterHelper.financial_term(profile_data[symbol].get("industry","NONE"), "industry", symbol),
+                'sector_en' : sector_en,
+                'industry_en' : industry_en,
+                'sector': sector_zh,
+                'industry': industry_zh,
                 'marketCap' : quote[symbol].get("marketCap",0)
             })
         except Exception as e:
@@ -106,46 +106,17 @@ def yahooQueryStockInfo(sqliteDbHelper, tickerMap):
 
     return errorRecords
 
-def loadIndexDataByYahooFinance(sqliteDbHelper):
-    indexes = ["^HSI", "^HSCE"]
-    start_date = "2006-10-13"
-
-    for index_symbol in indexes:
-        df = yf.download(
-            index_symbol,
-            start=start_date,
-            interval="1d",
-            progress=False,
-            multi_level_index=False,  # Forces 1D columns
-        )
-
-        if df.empty:
-            continue
-
-        df = df.reset_index()
-
-        # Vectorized column mapping
-        records = pd.DataFrame(
-            {
-                "symbol": index_symbol,
-                "period": "D",
-                "dt": df["Date"].dt.strftime("%Y%m%d"),
-                "tm": "000000",
-                "open": df["Open"],
-                "high": df["High"],
-                "low": df["Low"],
-                "close": df["Close"],
-                "volume": df["Volume"],
-                "adj_close": df["Close"],
-                "open_int": 0,
-            }
-        )
-
-        logging.info("\n" + records.tail(5).to_string())
-
-        rows = records.to_dict(orient="records")
-        updatedRows = sqliteDbHelper.insertDailyStockPrice(rows)
-        logging.info(f"Yahoo indexes Processed[{index_symbol}] : {len(rows)} / Updated : {updatedRows}")
+def dumpSectorStatistics(sqliteDbHelper):
+    # price history row
+    sectorSql = """
+        SELECT sector, industry, count(1) 
+        FROM stock
+        group by sector, industry
+        order by sector, industry 
+    """
+    sectors = sqliteDbHelper.fetchAllRows(sectorSql)
+    df = pd.DataFrame(sectors)
+    logging.info("\n" + df.to_string())
 
 #
 # Main program
@@ -156,11 +127,11 @@ if __name__ == "__main__":
     tickerMap = tickersFromXls(hkexConfig)
     logging.info(f"SIZE : {len(tickerMap)}")
 
-    # load index data
-    loadIndexDataByYahooFinance(sqliteDbHelper)
-
     # Split ticker_list into batches of items
     errorRecords = yahooQueryStockInfo(sqliteDbHelper, tickerMap)
     if len(errorRecords) > 0:
         df = pd.DataFrame(errorRecords)
         logging.info("\n" + df.to_markdown(index=False).strip())  
+
+    # dump sector and industry statistics
+    dumpSectorStatistics(sqliteDbHelper)    

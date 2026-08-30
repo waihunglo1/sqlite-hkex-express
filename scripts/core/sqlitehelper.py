@@ -47,8 +47,14 @@ class SqliteDbHelper:
                 # Use SQLite "INSERT OR REPLACE" logic row-by-row
                 for _, row in df.iterrows():
                     cursor.execute('''
-                        REPLACE INTO STOCK (symbol,name,industry,sector,market_cap) VALUES (?, ?, ?, ?, ?)
-                    ''', (row['symbol'], row['name'], row['industry'], row['sector'], row['marketCap']))
+                        REPLACE INTO STOCK (symbol,name,industry,sector,market_cap,industry_en,sector_en) VALUES (?, ?, ?, ?, ?, ?, ?)
+                    ''', (
+                        row['symbol'], row['name'], row['industry'], 
+                        row['sector'], row['marketCap'],
+                        row['industry_en'],row['sector_en']
+                        )
+
+                    )
                     # 📜 獲取受影響的行數
                     updated += cursor.rowcount
                 
@@ -62,24 +68,24 @@ class SqliteDbHelper:
 
         return updated   
 
-    def fetchAllRows(self, sql):
+    def fetchAllRows(self, sql: str, params: tuple | list | dict = ()):
         cleaned = sql.replace("\r", " ").replace("\n", " ")
         try:
             # Start high-precision timer
-            start_time = time.perf_counter()
+            # start_time = time.perf_counter()
 
             with sqlite3.connect(self.db_path, timeout=10) as conn:
                 conn.row_factory = sqlite3.Row
-                logging.info(f"Start running sql: {cleaned[:30]}..{cleaned[-20:]}")
-                cursor = conn.execute(cleaned)
+                # logging.info(f"Start running sql: {cleaned[:30]}..{cleaned[-20:]}")
+                cursor = conn.execute(cleaned, params)
                 rows = cursor.fetchall()  
 
                 # Calculate elapsed time in milliseconds
-                elapsed_ms = (time.perf_counter() - start_time) * 1000
+                # elapsed_ms = (time.perf_counter() - start_time) * 1000
 
-                logging.info(
-                    f"⏱️ [{elapsed_ms:.2f} ms] ({len(rows)} rows) | SQL: {cleaned[:30]}..{cleaned[-20:]}"
-                )
+                # logging.info(
+                #    f"⏱️ [{elapsed_ms:.2f} ms] ({len(rows)} rows) | SQL: {cleaned[:30]}..{cleaned[-20:]}"
+                # )
                 return rows         
         except sqlite3.Error as e:
             logging.error(f"❌ ⚫ 其他 SQLite 錯誤: {e}")
@@ -245,7 +251,118 @@ class SqliteDbHelper:
 
         return updated 
 
-    def insertOrReplaceStockInfo(self, records):
+    def insertOrReplacePriceStats(self, records) -> int:
+        df = pd.DataFrame(records)
+        updated = 0
+        try:
+            with sqlite3.connect(self.db_path, timeout=10) as conn:
+                cursor = conn.cursor()
+            
+                # Use SQLite "INSERT OR REPLACE" logic row-by-row
+                for _, row in df.iterrows():
+                    cursor.execute('''
+                        REPLACE INTO DAILY_STOCK_STATS 
+                        (symbol, dt, start_dt, open, high, low, close, volume, 
+                        prev_open, prev_high, prev_low, prev_close, prev_volume, 
+                        roc020, roc125, rsi014, sma200, sma150, sma100, sma050, sma020, sma010, sma005, sma003, 
+                        ema050, ema200, ema200pref, sma200pref, ema500pref, sma50pref, rsi14sctr, ppo01sctr, roc125sctr, sctr, 
+                        histDay, chg_pct_1d, chg_pct_5d, chg_pct_10d, chg_pct_20d, chg_pct_50d, chg_pct_100d, sma10turnover, 
+                        sma20turnover, sma50turnover, above_200d_sma ,above_150d_sma ,above_100d_sma ,above_50d_sma, 
+                        above_20d_sma ,above_10d_sma ,above_5d_sma, vp_high, vp_low, vp_bullish, vp_bearish,
+                        rs, normalise_rs, rs_priceOverSMA20, rs_slopeSMA20, rs_slopeSMA50, rs_slopeSMA150,
+                        priceOverSMA20, slopeSMA20, slopeSMA50, slopeSMA150, adr20, adr05, slopeAdr20, slopeAdr05
+                        )   
+                        VALUES 
+                        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                        ?, ?, ?, ?, ?, ?, 
+                        ?, ?, ?, ?,
+                        ?, ?, ?, ?
+                        )
+                    ''', (
+                        row["symbol"],
+                        row["dt"],
+                        row["start_dt"],
+                        row["open"],
+                        row["high"],
+                        row["low"],
+                        row["close"],
+                        row["volume"],
+                        row["prev_open"],
+                        row["prev_high"],
+                        row["prev_low"],
+                        row["prev_close"],
+                        row["prev_volume"],
+                        row["roc20"], 
+                        row["roc125"],
+                        row["rsi14"],
+                        row["sma200"],
+                        row["sma150"],
+                        row["sma100"],
+                        row["sma50"],
+                        row["sma20"],
+                        row["sma10"],
+                        row["sma05"],
+                        row["sma03"],
+                        row["ema50"],   
+                        row["ema200"],
+                        row["ema200pref"],
+                        row["sma200pref"],
+                        row["ema500pref"],
+                        row["sma50pref"],
+                        row["rsi14sctr"],
+                        row["ppo01sctr"],
+                        row["roc125sctr"],
+                        row["sctr"],
+                        row["histDay"],  
+                        row["chg_pct_1d"],
+                        row["chg_pct_5d"],
+                        row["chg_pct_10d"],
+                        row["chg_pct_20d"],
+                        row["chg_pct_50d"],
+                        row["chg_pct_100d"],
+                        row["sma10turnover"],
+                        row["sma20turnover"],  
+                        row["sma50turnover"],
+                        row["above_200d_sma"],
+                        row["above_150d_sma"],
+                        row["above_100d_sma"],
+                        row["above_50d_sma"],
+                        row["above_20d_sma"],
+                        row["above_10d_sma"],
+                        row["above_5d_sma"],
+                        row["vp_high"],
+                        row["vp_low"],
+                        row["vp_bullish"],
+                        row["vp_bearish"],
+                        row["rs"],
+                        row["normalise_rs"],
+                        row["rs_priceOverSMA20"],
+                        row["rs_slopeSMA20"],
+                        row["rs_slopeSMA50"],
+                        row["rs_slopeSMA150"],
+                        row["priceOverSMA20"],
+                        row["slopeSMA20"],
+                        row["slopeSMA50"],
+                        row["slopeSMA150"],
+                        row["adr20"],
+                        row["adr05"],
+                        row["slopeAdr20"],
+                        row["slopeAdr05"]                                             
+                    ))
+                    updated += cursor.rowcount
+                
+                conn.commit()
+        except sqlite3.Error as e:
+            logging.error(f"❌ ⚫ 其他 SQLite 錯誤: {e}")
+            sys.exit(1)
+        except Exception as e:
+            logging.error(f"❌ ⚪ 未知錯誤: {e}")
+            sys.exit(1)
+
+        return updated 
+    
+    def _insertOrReplaceStockInfo(self, records):
         df = pd.DataFrame(records)
         df["symbol"] = df["symbol"].str.replace("/", "-", regex=False)
         updated = 0

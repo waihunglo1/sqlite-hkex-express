@@ -18,9 +18,12 @@ cmd /c "py scripts/dn-yfinance-hk.py 2>&1" | Tee-Object -FilePath $LogFile -Appe
 
 # 2. Run Node.js Script
 Write-Host "Running Node.js script..." -ForegroundColor Yellow
-cmd /c "npm run lpv2 2>&1" | Tee-Object -FilePath $LogFile -Append
+cmd /c "npm run process 2>&1" | Tee-Object -FilePath $LogFile -Append
 
 Write-Host "Running Python script 03" -ForegroundColor Yellow
-cmd /c "py scripts/populate-gspread.py 2>&1" | Tee-Object -FilePath $LogFile -Append
+cmd /c "py scripts/proc-statistics.py 2>&1" | Tee-Object -FilePath $LogFile -Append
+
+Write-Host "Running Python script 04" -ForegroundColor Yellow
+cmd /c "py scripts/to-gsheet.py 2>&1" | Tee-Object -FilePath $LogFile -Append
 
 Write-Host "=== All scripts finished. Log saved to $LogFile ===" -ForegroundColor Gree

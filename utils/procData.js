@@ -19,7 +19,7 @@ const helper = require("./helper.js");
 const sqliteHelper = require('./sqliteHelper.js');
 const logger = require('./logger')
 
-const queryDate = '20260828'; // = '20260730'
+const queryDate = ''; // = '20260730'
 const querySymbol = '' // '2697.HK';
 const queryStartDate = ''; // '20260730'
 const queryEndDate = ''; // '20260730'

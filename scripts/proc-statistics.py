@@ -2,6 +2,48 @@ import logging
 import pandas as pd
 from core import config, sqliteDbHelper, quoteParser
 from core import utility as helper
+import yfinance as yf
+
+def loadIndexDataByYahooFinance(sqliteDbHelper):
+    indexes = ["^HSI", "^HSCE"]
+    start_date = "2006-10-13"
+
+    for index_symbol in indexes:
+        df = yf.download(
+            index_symbol,
+            start=start_date,
+            interval="1d",
+            progress=False,
+            multi_level_index=False,  # Forces 1D columns
+        )
+
+        if df.empty:
+            continue
+
+        df = df.reset_index()
+
+        # Vectorized column mapping
+        records = pd.DataFrame(
+            {
+                "symbol": index_symbol,
+                "period": "D",
+                "dt": df["Date"].dt.strftime("%Y%m%d"),
+                "tm": "000000",
+                "open": df["Open"],
+                "high": df["High"],
+                "low": df["Low"],
+                "close": df["Close"],
+                "volume": df["Volume"],
+                "adj_close": df["Close"],
+                "open_int": 0,
+            }
+        )
+
+        logging.info("\n" + records.tail(5).to_string())
+
+        rows = records.to_dict(orient="records")
+        updatedRows = sqliteDbHelper.insertDailyStockPrice(rows)
+        logging.info(f"Yahoo indexes Processed[{index_symbol}] : {len(rows)} / Updated : {updatedRows}")
 
 def newSectorStats() -> dict:
     return {
@@ -137,5 +179,6 @@ def populateMarketStatistics(sqliteDbHelper, config):
 # Main program
 #
 if __name__ == "__main__": 
+    loadIndexDataByYahooFinance(sqliteDbHelper)
     populateSectorStatistics(sqliteDbHelper, config)
     populateMarketStatistics(sqliteDbHelper, config)

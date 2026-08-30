@@ -186,6 +186,9 @@ ALTER TABLE DAILY_STOCK_STATS ADD COLUMN adr05 real;
 ALTER TABLE DAILY_STOCK_STATS ADD COLUMN slopeAdr20 real;     
 ALTER TABLE DAILY_STOCK_STATS ADD COLUMN slopeAdr05 real;   
 
+alter table stock add column sector_en varchar(50);
+alter table stock add column industry_en varchar(50);
+
 CREATE VIEW IF NOT EXISTS HK_INDICES AS
 select hsi.dt, hsi, hsce from 
 (

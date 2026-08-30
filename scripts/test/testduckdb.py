@@ -7,16 +7,7 @@ import sqlite3
 import os
 from pathlib import Path
 import logging
-import time
-import random
-import math
-
-# 1. 設定日誌格式：包含 [時間] [層級] 檔案名稱:行數 - 訊息
-logging.basicConfig(
-    level=logging.INFO,  # 設定最低捕捉層級
-    format='%(asctime)s [%(levelname)s] %(filename)s:%(lineno)04d - %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'  # 精簡時間格式
-)
+from core import config, sqliteFile
 
 def populate(conn, config, id, shouldTranspose):
     sql = config[id]['SQL']
@@ -44,11 +35,8 @@ def initDuckDb(sqliteFile):
     return conn  
 
 # Initialize the parser
-config = configparser.ConfigParser()
-config.read('config/analyst-data-hk.ini', encoding='utf-8')
-sqliteFile = config['SQLITE']['FILE']
 logging.info(f"SQLITE : {sqliteFile}") 
 
 conn = initDuckDb(sqliteFile)
-populate(conn, config, "MARKET-BREADTH-SQL", False)
+# populate(conn, config, "MARKET-BREADTH-SQL", False)
 populate(conn, config, "SECTOR-BREADTH-SQL", False)

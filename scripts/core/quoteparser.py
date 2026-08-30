@@ -71,7 +71,7 @@ class QuoteParser:
 
     def process_sales_records(self, symbol: str, sales_records: list[str], prices: list[dict]):
         """Extracts opening price from sales record tags and updates prices list."""
-        text = "".join(sales_records).replace(",", "")
+        text = " ".join(sales_records).replace(",", "")
         regexes = [re.compile(r"<(.+?)>"), re.compile(r"\[(.+?)\]")]
 
         auction_session = []
@@ -250,6 +250,7 @@ class QuoteParser:
 
     def parse_hkex_file(self, sqlitehelper, file_path: str):
         """Scrapes HTML file using BeautifulSoup and inserts stock prices into database."""
+        logging.info(f"Start process [{file_path}]")
         with open(file_path, "rb") as f:
             buffer = f.read()
 

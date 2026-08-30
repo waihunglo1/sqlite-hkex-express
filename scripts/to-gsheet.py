@@ -51,7 +51,11 @@ def fill_column(df, conn, columnName):
         
     # 動態寫入 daily_stat["normalise_rs1"] 到 daily_stat["normalise_rs20"]
     for i, val in enumerate(rs_list, start=1):
-        df[f"{columnName}{i}"] = val if val is not None else 0        
+        df[f"{columnName}{i}"] = val if val is not None else 0    
+
+def dummyFunc(df, conn):
+    logging.info("Dummy Func called")  
+    return df          
 
 def _publish_with_retry(df, file, tabName):
     gsheetHelper.publish_gsheet(df, file, tabName)
@@ -77,8 +81,8 @@ def populate(config, id):
     # publish to google-sheet
     targetFile = config[id]['FILE']
     tabName = config[id]['TAB_NAME']
-    _publish_with_retry(df, targetFile, tabName)
+    _publish_with_retry(df, targetFile, tabName) 
 
 if __name__ == "__main__":
-    # populate(config,'GOOGLE-SPREADSHEET-01')
+    populate(config,'GOOGLE-SPREADSHEET-01')
     populate(config,'GOOGLE-SPREADSHEET-02')
