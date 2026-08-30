@@ -1,17 +1,16 @@
 import yfinance as yf
 import pandas as pd
-import configparser
-import sqlite3
 import os
 import logging
 import time
 import random
 import math
 import sys
-import translatorhelper as translator
+from core import config, sqliteDbHelper, quoteParser
+from core import utility as helper
+from core import translator as translaterHelper
 
 # Import the class from your utility file
-from sqlitehelper import SqliteDbHelper
 from yahooquery import Ticker
 from pathlib import Path
 
@@ -65,8 +64,8 @@ def doYahooQuery(sqliteDbHelper, tickerBatch, errorRecords, tickerMap):
             records.append({
                 'symbol': symbol,
                 'name'  : quote[symbol].get("longName",tickerName),
-                'sector': translator.financial_term(profile_data[symbol].get("sector","NONE"), "sector", symbol),
-                'industry': translator.financial_term(profile_data[symbol].get("industry","NONE"), "industry", symbol),
+                'sector': translaterHelper.financial_term(profile_data[symbol].get("sector","NONE"), "sector", symbol),
+                'industry': translaterHelper.financial_term(profile_data[symbol].get("industry","NONE"), "industry", symbol),
                 'marketCap' : quote[symbol].get("marketCap",0)
             })
         except Exception as e:
@@ -92,14 +91,17 @@ def yahooQueryStockInfo(sqliteDbHelper, tickerMap):
     errorRecords = []
     batch_size = 100
     updated = 0
+    sleep = 0
+
     # Extract keys as a standard Python list
     tickerList = list(tickerMap.keys())
+    logging.info(f"YahooQuery / DB-Updated : {updated} / {len(tickerList)} / Error : {len(errorRecords)} / sleep : {sleep:.2f}")
 
     for i in range(0, len(tickerList), batch_size):
         tickerBatch = tickerList[i : i + batch_size]
         updated += doYahooQuery(sqliteDbHelper, tickerBatch, errorRecords, tickerMap)
         sleep = random.uniform(1, 10)
-        logging.info(f"DB Updated : {updated} / {len(tickerList)} / Error Records : {len(errorRecords)} / sleep : {sleep:.2f}")
+        logging.info(f"YahooQuery / DB-Updated : {updated} / {len(tickerList)} / Error : {len(errorRecords)} / sleep : {sleep:.2f}")
         time.sleep(sleep)
 
     return errorRecords
@@ -146,26 +148,19 @@ def loadIndexDataByYahooFinance(sqliteDbHelper):
         logging.info(f"Yahoo indexes Processed[{index_symbol}] : {len(rows)} / Updated : {updatedRows}")
 
 #
-# Main Program
-# 
+# Main program
+#
+if __name__ == "__main__": 
+    # read xls
+    hkexConfig = config['HKEX']
+    tickerMap = tickersFromXls(hkexConfig)
+    logging.info(f"SIZE : {len(tickerMap)}")
 
-# Initialize the parser
-config = configparser.ConfigParser()
-config.read('config/analyst-data-hk.ini', encoding='utf-8')
-sqliteFile = config['SQLITE']['FILE']
-logging.info(f"SQLITE : {sqliteFile}") 
-sqliteDbHelper = SqliteDbHelper(sqliteFile)
+    # load index data
+    loadIndexDataByYahooFinance(sqliteDbHelper)
 
-# read xls
-hkexConfig = config['HKEX']
-tickerMap = tickersFromXls(hkexConfig)
-logging.info(f"SIZE : {len(tickerMap)}")
-
-# load index data
-loadIndexDataByYahooFinance(sqliteDbHelper)
-
-# Split ticker_list into batches of items
-errorRecords = yahooQueryStockInfo(sqliteDbHelper, tickerMap)
-if len(errorRecords) > 0:
-    df = pd.DataFrame(errorRecords)
-    logging.info("\n" + df.to_markdown(index=False).strip())  
+    # Split ticker_list into batches of items
+    errorRecords = yahooQueryStockInfo(sqliteDbHelper, tickerMap)
+    if len(errorRecords) > 0:
+        df = pd.DataFrame(errorRecords)
+        logging.info("\n" + df.to_markdown(index=False).strip())  

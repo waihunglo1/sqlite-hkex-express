@@ -12,7 +12,6 @@ import time
 import random
 import math
 import logging
-import sqlitehelper as sqliteUtil
 import utility as util
 
 # 1. 設定日誌格式：包含 [時間] [層級] 檔案名稱:行數 - 訊息

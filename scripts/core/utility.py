@@ -1,7 +1,7 @@
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
-from datetime import date, timedelta
+from datetime import date, timedelta, timezone
 import os
 import datetime
 import time
@@ -10,6 +10,13 @@ import posixpath
 from urllib.parse import urlsplit
 import logging
 import pandas as pd
+import os
+from pathlib import Path
+import re
+import zipfile
+import types
+import sys
+import inspect
 
 # Define the number of days for the cutoff
 days_cutoff = 6
@@ -173,6 +180,116 @@ def splitStringToArray(input):
     else:
         logging.error("設定檔錯誤：'run_mode' 為空或格式不正確。")
         return None     
+
+def reformat_symbol_for_hk(symbol: str) -> str:
+    """Reformats Hong Kong stock symbols to standard 4-digit code + .HK format.
+
+    Examples:
+        '0005.HK' -> '0005.HK'
+        '00005.HK' -> '0005.HK'
+        '5.HK'    -> '0005.HK'
+    """
+    if not symbol.endswith(".HK"):
+        return symbol
+
+    # Remove the .HK suffix (case-insensitive)
+    code = re.sub(r"\.HK$", "", symbol, flags=re.IGNORECASE)
+
+    # Remove leading zero if code length > 4 (e.g., '00005' -> '0005')
+    if len(code) > 4 and code.startswith("0"):
+        code = code[1:5]
+
+    # Pad leading zeros to ensure a minimum width of 4 digits (e.g., '5' -> '0005')
+    if len(code) < 4:
+        code = code.zfill(4)
+
+    return f"{code}.HK"
+
+
+def traverse_directory(
+    dir_path: str, regex_pattern: re.Pattern | str = None, result: list = None
+) -> list[dict]:
+    """Recursively walks a directory and returns matching files as list of dicts.
+
+    Matches Node.js output structure: [{'file': name, 'path': full_path, 'type': 'file'}]
+    """
+    if result is None:
+        result = []
+
+    if isinstance(regex_pattern, str):
+        regex_pattern = re.compile(regex_pattern)
+
+    try:
+        entries = os.listdir(dir_path)
+    except OSError as e:
+        logging.error(f"Error reading directory {dir_path}: {e}")
+        return result
+
+    for file in entries:
+        f_path = os.path.abspath(os.path.join(dir_path, file))
+        file_stats = {"file": file, "path": f_path}
+
+        if os.path.isdir(f_path):
+            file_stats["type"] = "dir"
+            file_stats["files"] = []
+            traverse_directory(f_path, regex_pattern, file_stats["files"])
+        else:
+            if regex_pattern is None or regex_pattern.search(file):
+                file_stats["type"] = "file"
+                result.append(file_stats)
+
+    return result
+
+
+def is_empty(value) -> bool:
+    """Checks whether a value is None, empty string, empty list, or empty dict."""
+    if value is None:
+        return True
+    if isinstance(value, (str, list, tuple, set, dict)):
+        return len(value) == 0
+    return False
+
+
+def today_string() -> str:
+    """Returns today's date string in YYYY-MM-DD format (UTC)."""
+    return datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+
+def today_year_month() -> list[str]:
+    """Returns today's year (YYYY) and month (MM) as strings."""
+    now = datetime.now(timezone.utc)
+    return [now.strftime("%Y"), now.strftime("%m")]
+
+
+def unzip_file(zip_path: str, output_dir: str):
+    """Extracts a ZIP archive to output_dir."""
+    with zipfile.ZipFile(zip_path, "r") as zip_ref:
+        zip_ref.extractall(output_dir)
+
+
+def create_directory_if_not_exists(directory_path: str):
+    """Creates directory if it doesn't already exist (equivalent to mkdir -p)."""
+    try:
+        Path(directory_path).mkdir(parents=True, exist_ok=True)
+        logging.info(
+            f"Directory created or already exists at: {directory_path}"
+        )
+    except Exception as error:
+        logging.error(f"Error creating directory: {error}")    
+
+def call_main_function(func_name: str, *args, **kwargs):
+    """Dynamically calls a function in main.py by name."""
+    main_module = sys.modules.get("__main__")
+
+    # Get the function attribute from main.py
+    func = getattr(main_module, func_name, None)
+
+    if callable(func):
+        return func(*args, **kwargs)
+    else:
+        raise AttributeError(
+            f"Function '{func_name}' not found or not callable in main.py"
+        )
 
 if __name__ == "__main__":
     logging.info("This is a different version of the module.py file.")    

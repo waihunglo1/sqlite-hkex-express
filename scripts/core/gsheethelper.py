@@ -1,7 +1,7 @@
-import gspread
 import os
 import certifi
 import logging
+import gspread
 
 os.environ['REQUESTS_CA_BUNDLE'] = certifi.where()
 os.environ['SSL_CERT_FILE'] = certifi.where()

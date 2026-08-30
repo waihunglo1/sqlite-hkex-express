@@ -1,33 +1,14 @@
-import os
-from datetime import date, timedelta
+import configparser
+from datetime import datetime
+import io
 import logging
+import os
 import re
+import sys
+from bs4 import BeautifulSoup
+import pandas as pd
 from core import config, sqliteDbHelper, quoteParser
 from core import utility as helper
-
-def downloadLastDays(hkexConfig, targetDays):
-  # Get today's date
-  today = date.today()
-
-  # Generate the last 5 dates (including today)
-  last_5_dates = [today - timedelta(days=i) for i in range(targetDays)]
-
-  for dt in last_5_dates:
-    if(helper.isWeekDay(dt)):
-        dateStr = dt.strftime("%y%m%d")
-        helper.downloadHtm(hkexConfig, "d" + dateStr + "e.htm")
-
-def downloadStockList(hkexConfig):
-  # download hkex stock list
-  targetUrl = hkexConfig['URL']
-  downloadPath = hkexConfig['DOWNLOAD_PATH']
-  downloadFileName = hkexConfig['listOfSecurities']
-  helper.downloadByChrome(targetUrl, downloadPath)     
-
-def downloadHistoricalQuoteFile(hkexConfig):
-  # download stock price file
-  helper.removeHistorialFiles(hkexConfig)
-  downloadLastDays(hkexConfig, 7)             
 
 def traverse_dir(sqlitehelper, config):
     """Traverses configured directory for HKEX files and processes them."""
@@ -55,14 +36,7 @@ def traverse_dir(sqlitehelper, config):
 
             if file_regex.match(file_name):
                 quoteParser.parse_hkex_file(sqlitehelper, file_full_path)
-#
-# Main program
-#
+
+
 if __name__ == "__main__": 
-  hkexConfig = config['HKEX']
-  logging.info(f"hkexConfig : {hkexConfig}") 
-  downloadStockList(hkexConfig)
-  downloadHistoricalQuoteFile(hkexConfig)
-  traverse_dir(sqliteDbHelper, config)
-
-
+    traverse_dir(sqliteDbHelper, config)
