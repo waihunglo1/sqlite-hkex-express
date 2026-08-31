@@ -8,7 +8,7 @@ import math
 import sys
 from core import config, sqliteDbHelper, quoteParser
 from core import utility as helper
-from core import translator as translaterHelper
+from common import translator as translaterHelper
 
 # Import the class from your utility file
 from yahooquery import Ticker
@@ -109,10 +109,10 @@ def yahooQueryStockInfo(sqliteDbHelper, tickerMap):
 def dumpSectorStatistics(sqliteDbHelper):
     # price history row
     sectorSql = """
-        SELECT sector, industry, count(1) 
+        SELECT sector, count(1) 
         FROM stock
-        group by sector, industry
-        order by sector, industry 
+        group by sector
+        order by sector 
     """
     sectors = sqliteDbHelper.fetchAllRows(sectorSql)
     df = pd.DataFrame(sectors)
