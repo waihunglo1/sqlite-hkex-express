@@ -2,8 +2,9 @@ import os
 from datetime import date, timedelta
 import logging
 import re
-from core import config, sqliteDbHelper, quoteParser
-from core import utility as helper
+from basehk import config, sqliteDbHelper
+from common import utility as helper
+from common.quoteparser import QuoteParser
 
 def downloadLastDays(hkexConfig, targetDays):
   # Get today's date
@@ -59,6 +60,7 @@ def traverse_dir(sqlitehelper, config):
 # Main program
 #
 if __name__ == "__main__": 
+  quoteParser = QuoteParser()
   hkexConfig = config['HKEX']
   logging.info(f"hkexConfig : {hkexConfig}") 
   downloadStockList(hkexConfig)

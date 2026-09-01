@@ -10,7 +10,6 @@ import pandas as pd
 import time
 from yahooquery import Ticker
 from pathlib import Path
-from . import utility as helper
 
 class SqliteDbHelper:
     """Helper class for managing SQLite database operations."""
@@ -426,9 +425,9 @@ class SqliteDbHelper:
                 logging.error("未找到任何資料。")
                 return None   
 
-            funcNamesList = helper.splitStringToArray(funcNames)
+            funcNamesList = self.splitStringToArray(funcNames)
             for funcName in funcNamesList:
-                df = helper.call_main_function(funcName, df, conn)
+                df = self.call_main_function(funcName, df, conn)
 
             # 2. 資料清洗：將 SQLite 的 None (在 Pandas 中為 NaN) 轉成空字串 ""
             # 這樣既能保持數值欄位的真實數值型態，又不會在寫入 Google Sheets 時出錯
@@ -439,3 +438,24 @@ class SqliteDbHelper:
             return None
         finally:
             conn.close()
+    def call_main_function(self, func_name: str, *args, **kwargs):
+        """Dynamically calls a function in main.py by name."""
+        main_module = sys.modules.get("__main__")
+
+        # Get the function attribute from main.py
+        func = getattr(main_module, func_name, None)
+
+        if callable(func):
+            return func(*args, **kwargs)
+        else:
+            raise AttributeError(
+                f"Function '{func_name}' not found or not callable in main.py"
+            )         
+
+    def splitStringToArray(self, input):
+        if isinstance(input, str) and input:
+            names = [name.strip() for name in input.split(",")]
+            return names
+        else:
+            logging.error("設定檔錯誤：'run_mode' 為空或格式不正確。")
+            return None                

@@ -6,8 +6,7 @@ import time
 import random
 import math
 import sys
-from core import config, sqliteDbHelper, quoteParser
-from core import utility as helper
+from basehk import config, sqliteDbHelper
 from common import translator as translaterHelper
 
 # Import the class from your utility file

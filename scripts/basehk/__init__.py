@@ -4,24 +4,6 @@ import os
 import sys
 from dotenv import load_dotenv
 from .sqlitehelper import SqliteDbHelper
-from .quoteparser import QuoteParser
-from .utility import (
-    removeHistorialFiles,
-    downloadHtm,
-    downloadByChrome,
-    dumpErrorRecord,
-    splitStringToArray,
-    reformat_symbol_for_hk,
-    traverse_directory,
-    is_empty,
-    today_string,
-    today_year_month,
-    unzip_file,
-    create_directory_if_not_exists
-)
-from .gsheethelper import (
-    publish_gsheet
-)
 
 # Execute initialization immediately on package import
 load_dotenv('.env')
@@ -46,8 +28,6 @@ if analyst_ini_path and os.path.exists(analyst_ini_path):
     logging.info(f"SQLITE : {sqliteFile}") 
     sqliteDbHelper = SqliteDbHelper(sqliteFile)   
 
-    # quote parser
-    quoteParser = QuoteParser() 
 else:
     logging.warning("ANALYST_DATA_INI path is missing or invalid.")
     sys.exit(1)

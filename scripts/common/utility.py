@@ -14,9 +14,7 @@ import os
 from pathlib import Path
 import re
 import zipfile
-import types
 import sys
-import inspect
 
 # Define the number of days for the cutoff
 days_cutoff = 6
@@ -276,20 +274,6 @@ def create_directory_if_not_exists(directory_path: str):
         )
     except Exception as error:
         logging.error(f"Error creating directory: {error}")    
-
-def call_main_function(func_name: str, *args, **kwargs):
-    """Dynamically calls a function in main.py by name."""
-    main_module = sys.modules.get("__main__")
-
-    # Get the function attribute from main.py
-    func = getattr(main_module, func_name, None)
-
-    if callable(func):
-        return func(*args, **kwargs)
-    else:
-        raise AttributeError(
-            f"Function '{func_name}' not found or not callable in main.py"
-        )
 
 if __name__ == "__main__":
     logging.info("This is a different version of the module.py file.")    

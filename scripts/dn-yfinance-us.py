@@ -12,7 +12,7 @@ import time
 import random
 import math
 import logging
-from core_us import config, duckDbHelper
+from baseus import config, duckDbHelper
 from common import translator as translaterHelper
 
 def usTickerFromGitAte329(tickerConfig):
@@ -155,17 +155,14 @@ def fillSectorIndustryByYahooQuery(tickers, updateRecords, errorRecords):
 #
 # Main Program
 # 
-#
-# Main program
-#
 if __name__ == "__main__": 
     tickerMap = usTickerFromGitAte329(config['TICKERS'])
 
     # Split ticker_list into batches of items
-    errorRecords = yahooQueryStockInfo(tickerMap)
-    if len(errorRecords) > 0:
-        df = pd.DataFrame(errorRecords)
-        logging.info("\n" + df.to_markdown(index=False).strip())  
+    # errorRecords = yahooQueryStockInfo(tickerMap)
+    # if len(errorRecords) > 0:
+    #    df = pd.DataFrame(errorRecords)
+    #    logging.info("\n" + df.to_markdown(index=False).strip())  
 
-    yahooHistPriceBatchQuery(config['PRICE_HISTORY'])
+    # yahooHistPriceBatchQuery(config['PRICE_HISTORY'])
 

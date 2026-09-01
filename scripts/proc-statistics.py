@@ -1,7 +1,7 @@
 import logging
 import pandas as pd
-from core import config, sqliteDbHelper, quoteParser
-from core import utility as helper
+from basehk import config, sqliteDbHelper, quoteParser
+from common import utility as helper
 import yfinance as yf
 
 def loadIndexDataByYahooFinance(sqliteDbHelper):

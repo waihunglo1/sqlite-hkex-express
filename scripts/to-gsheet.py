@@ -7,9 +7,9 @@ import certifi
 import logging
 import pandas as pd
 from tenacity import retry, stop_after_attempt, wait_exponential
-from core import config, sqliteDbHelper, quoteParser
-from core import utility as helper
-from core import gsheethelper as gsheetHelper
+from basehk import config, sqliteDbHelper, quoteParser
+from common import utility as helper
+from common import gsheethelper as gsheetHelper
 
 # Create a wrapped function with retry mechanism
 @retry(

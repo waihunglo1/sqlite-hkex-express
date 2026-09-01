@@ -4,16 +4,21 @@ import logging
 _SECTOR_RAW = {
     "Basic Materials": "基礎材料",
     "Communication Services": "通訊服務",
+    "Telecommunications": "通訊服務",
     "Consumer Cyclical": "非必需消費品",
+    "Consumer Discretionary": "非必需消費品",
     "Consumer Defensive": "必需消費品",
     "Energy": "能源",
     "Financial Services": "金融服務",
+    "Financial": "金融服務",
     "Healthcare": "醫療保健",
+    "Health care": "醫療保健",
     "Industrials": "工業",
     "Real Estate": "房地產",
     "Technology": "科技",
     "Utilities": "公用事業",
     "NONE": "其他",
+    "Uncategorized": "其他",    
     "": "其他"
 }
 
