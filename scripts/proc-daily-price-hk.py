@@ -10,7 +10,7 @@ from common import translator as translaterHelper
 from daily_price_processor import DailyPriceProcessor
 
 # Run Configuration
-QUERY_DATE = "20260901"  # e.g., '20260730'
+QUERY_DATE = ""  # e.g., '20260730'
 QUERY_SYMBOL = ""  # e.g., '2697.HK'
 
 if __name__ == "__main__": 

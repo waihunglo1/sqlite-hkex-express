@@ -47,6 +47,7 @@ def doYahooQuery(sqliteDbHelper, tickerBatch, errorRecords, tickerMap):
     # summary = tickers.summary_detail
     profile_data = tickers.asset_profile
     quote = tickers.quotes
+    quote_type = tickers.quote_type
     # logging.info(len(profile_data), len(quote))
 
     records = []
@@ -57,15 +58,19 @@ def doYahooQuery(sqliteDbHelper, tickerBatch, errorRecords, tickerMap):
             industry_en = profile_data[symbol].get("industry","UNKNOWN")
             sector_zh = translaterHelper.financial_term(sector_en, "sector", symbol)
             industry_zh = translaterHelper.financial_term(industry_en, "industry", symbol)
+            longName = quote[symbol].get("longName",tickerName)
+            marketCap = quote[symbol].get("marketCap",0)
+            quote_type_str = quote_type[symbol].get("quoteType")  # e.g., 'EQUITY', 'ETF', 'OPTION'
 
             records.append({
                 'symbol': symbol,
-                'name'  : quote[symbol].get("longName",tickerName),
+                'name'  : longName,
                 'sector_en' : sector_en,
                 'industry_en' : industry_en,
                 'sector': sector_zh,
                 'industry': industry_zh,
-                'marketCap' : quote[symbol].get("marketCap",0)
+                'marketCap' : marketCap,
+                'quoteType' : quote_type_str
             })
         except Exception as e:
             # logging.error(f"❌ [{symbol}] 未知錯誤: {e} / {profile[symbol]}")

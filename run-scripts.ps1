@@ -19,7 +19,7 @@ Write-Host "Running Python script 02" -ForegroundColor Yellow
 cmd /c "py scripts/dn-yfinance-hk.py 2>&1" | Tee-Object -FilePath $LogFile -Append
 
 Write-Host "Running Python script 03" -ForegroundColor Yellow
-cmd /c "py scripts/proc-daily-price.py 2>&1" | Tee-Object -FilePath $LogFile -Append
+cmd /c "py scripts/proc-daily-price-hk.py 2>&1" | Tee-Object -FilePath $LogFile -Append
 
 Write-Host "Running Python script 03" -ForegroundColor Yellow
 cmd /c "py scripts/proc-statistics.py 2>&1" | Tee-Object -FilePath $LogFile -Append

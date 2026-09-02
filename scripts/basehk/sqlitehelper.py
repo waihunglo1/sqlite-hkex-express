@@ -46,11 +46,13 @@ class SqliteDbHelper:
                 # Use SQLite "INSERT OR REPLACE" logic row-by-row
                 for _, row in df.iterrows():
                     cursor.execute('''
-                        REPLACE INTO STOCK (symbol,name,industry,sector,market_cap,industry_en,sector_en) VALUES (?, ?, ?, ?, ?, ?, ?)
+                        REPLACE INTO STOCK (symbol,name,industry,sector,market_cap,industry_en,sector_en,quote_type) 
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                     ''', (
                         row['symbol'], row['name'], row['industry'], 
                         row['sector'], row['marketCap'],
-                        row['industry_en'],row['sector_en']
+                        row['industry_en'],row['sector_en'],
+                        row['quote_type']
                         )
 
                     )

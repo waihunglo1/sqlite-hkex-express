@@ -113,19 +113,21 @@ class DuckDbHelper(BaseDbHelper):
             
                 for _, row in df.iterrows():
                     cursor.execute('''
-                        INSERT INTO STOCK (symbol, name, industry, sector, market_cap,industry_en,sector_en) 
-                            VALUES (?, ?, ?, ?, ?, ?, ?)
+                        INSERT INTO STOCK (symbol, name, industry, sector, market_cap, industry_en, sector_en, quote_type) 
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                             ON CONFLICT(symbol) DO UPDATE SET
                                 name = EXCLUDED.name,
                                 industry = EXCLUDED.industry,
                                 sector = EXCLUDED.sector,
                                 market_cap = EXCLUDED.market_cap,   
                                 industry_en = EXCLUDED.industry_en,
-                                sector_en = EXCLUDED.sector_en
+                                sector_en = EXCLUDED.sector_en,
+                                quote_type = EXCLUDED.quote_type
                     ''', (
                         row['symbol'], row['name'], row['industry'], 
                         row['sector'], row['marketCap'],
-                        row['industry_en'],row['sector_en']
+                        row['industry_en'], row['sector_en'],
+                        row['quoteType']
                         )
 
                     )
