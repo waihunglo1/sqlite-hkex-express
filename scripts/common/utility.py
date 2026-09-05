@@ -15,6 +15,7 @@ from pathlib import Path
 import re
 import zipfile
 import sys
+from contextlib import contextmanager
 
 # Define the number of days for the cutoff
 days_cutoff = 6
@@ -273,7 +274,30 @@ def create_directory_if_not_exists(directory_path: str):
             f"Directory created or already exists at: {directory_path}"
         )
     except Exception as error:
-        logging.error(f"Error creating directory: {error}")    
+        logging.error(f"Error creating directory: {error}")
+
+def prettyPrint(sectors):
+    df = pd.DataFrame(sectors)
+    # Clean up column names and nulls
+    df.columns = ["Sector", "Count"]
+    df["Sector"] = df["Sector"].replace("", "UNASSIGNED").fillna("UNASSIGNED")
+
+    # Print clean string representation
+    log_table = df.to_string(index=False, justify="left")
+    logging.info(f"\nSector Summary:\n{log_table}")
+
+@contextmanager
+def time_it(task_name: str):
+    """
+    A reusable context manager to measure execution time of a code block.
+    """
+    start = time.perf_counter()
+    try:
+        yield
+    finally:
+        elapsed = time.perf_counter() - start
+        # This dynamically uses the correct logging level (INFO, DEBUG, etc.)
+        logging.info(f"⏱️ {task_name} took {elapsed:.2f} seconds")    
 
 if __name__ == "__main__":
     logging.info("This is a different version of the module.py file.")    

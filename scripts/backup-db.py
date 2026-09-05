@@ -95,24 +95,32 @@ def upload_file_to_drive(
     logging.info(f"View Link: {response.get('webViewLink')}")
     return response
 
-
-if __name__ == "__main__":
+def hkBackupFile():
     config = configparser.ConfigParser()
     config.read('config/analyst-data-hk.ini', encoding='utf-8')
     sqliteConfig = config['SQLITE']
-    logging.info(f"sqliteConfig : {sqliteConfig}") 
+    fileName = sqliteConfig['FILE']
+    return fileName
 
+def usBackupFile():
+    config = configparser.ConfigParser()
+    config.read('config/analyst-data-us.ini', encoding='utf-8')
+    sqliteConfig = config['DUCKDB']
+    fileName = sqliteConfig['FILE']
+    return fileName
+
+if __name__ == "__main__":
     # Load variables from .env file into environment
     env_path = Path(".") / ".env.local"
     load_dotenv(dotenv_path=env_path)
 
-    # Example Usage:
-    LOCAL_FILE = sqliteConfig['FILE']
+    filesToBackup = [hkBackupFile(), usBackupFile()]
 
     # Optional: Google Drive folder ID (from the URL when viewing the folder on drive.google.com)
     # e.g., '1a2b3c4d5e6f7g8h9i0j'
     FOLDER_ID = os.getenv("GDRIVE_BACKUP_FOLDER_ID")
 
-    logging.info(f"Local file : {LOCAL_FILE}")
-    logging.info(f"Folder Id : {FOLDER_ID}")
-    upload_file_to_drive(local_file_path=LOCAL_FILE, drive_folder_id=FOLDER_ID)
+    for file in filesToBackup:
+        logging.info(f"Local file : {file}")
+        logging.info(f"Folder Id : {FOLDER_ID}")
+        upload_file_to_drive(local_file_path=file, drive_folder_id=FOLDER_ID)

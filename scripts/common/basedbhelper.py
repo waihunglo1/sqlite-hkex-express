@@ -17,3 +17,15 @@ class BaseDbHelper(ABC):
     ) -> int:
         """Upsert daily price statistics into the database."""
         pass
+
+    @abstractmethod
+    def insertOrReplaceSectorRecords(self, records) -> int:
+        pass
+
+    @abstractmethod
+    def insertOrReplaceMarketRecords(self, records) -> int:
+        pass
+
+    @abstractmethod
+    def insertDailyStockPrice(self, prices: list[dict]) -> int:
+        pass

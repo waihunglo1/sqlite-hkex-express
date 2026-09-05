@@ -6,10 +6,13 @@ import os
 import certifi
 import logging
 import pandas as pd
+import argparse
+import importlib
+
 from tenacity import retry, stop_after_attempt, wait_exponential
-from basehk import config, sqliteDbHelper, quoteParser
 from common import utility as helper
 from common import gsheethelper as gsheetHelper
+from common import basedbhelper as dbHelper
 
 # Create a wrapped function with retry mechanism
 @retry(
@@ -68,11 +71,15 @@ def moveColumns(df, moveColsToEnd):
             df[colName] = col
         df = df.copy()
 
-def populate(config, id):
+def fetch_and_populate(conn, sql, func_name):        
+    df = gsheetHelper.fetch_and_populate(conn, sql, func_name)
+    return df
+
+def populate(config, dbHelper, id):
     # step1 query data from sqlite file
     sql = config[id]['SQL']
     funcNames = config[id]['FUNCTION_NAME']
-    df = sqliteDbHelper.fetch_and_populate(sql, funcNames)
+    df = dbHelper.callbackWithConn(fetch_and_populate, sql, funcNames)
 
     # move columns to end of dataframe
     moveColsToEnd = config[id]['MOVE_COLS_TO_END']
@@ -83,6 +90,23 @@ def populate(config, id):
     tabName = config[id]['TAB_NAME']
     _publish_with_retry(df, targetFile, tabName) 
 
+##################################################################
+# 1. Parse command-line flags
+parser = argparse.ArgumentParser(description="Publish stock stats to Google Sheets")
+parser.add_argument(
+    "--market",
+    choices=["hk", "us"],
+    default="hk",
+    help="Target market (hk or us)",
+)
+args = parser.parse_args()
+
+# 2. Dynamically import config and dbHelper based on market choice
+if args.market == "us":
+    from baseus import config, duckDbHelper as sqliteDbHelper  # or duckDbHelper
+else:
+    from basehk import config, sqliteDbHelper
+
 if __name__ == "__main__":
-    populate(config,'GOOGLE-SPREADSHEET-01')
-    populate(config,'GOOGLE-SPREADSHEET-02')
+    populate(config, sqliteDbHelper, 'GOOGLE-SPREADSHEET-01')
+    populate(config, sqliteDbHelper, 'GOOGLE-SPREADSHEET-02')

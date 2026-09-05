@@ -2,6 +2,8 @@ import os
 import certifi
 import logging
 import gspread
+import pandas as pd
+import sys
 
 os.environ['REQUESTS_CA_BUNDLE'] = certifi.where()
 os.environ['SSL_CERT_FILE'] = certifi.where()
@@ -68,3 +70,47 @@ def publish_gsheet(df, file, tabName):
 
     except Exception as e:
         logging.error(f"發生錯誤：{e}  {file} / {tabName}")
+
+def fetch_and_populate(conn, sql, funcNames):
+    try:
+        logging.info("正在從 DB 讀取資料...")
+
+        # --- PANDAS 優化：直接讀取為 DataFrame，保持真實的數據型態 (int, float, object) ---
+        df = pd.read_sql_query(sql, conn)
+        if df.empty:
+            logging.error("未找到任何資料。")
+            return None   
+
+        funcNamesList = splitStringToArray(funcNames)
+        for funcName in funcNamesList:
+            df = call_main_function(funcName, df, conn)
+
+        # 2. 資料清洗：將 SQLite 的 None (在 Pandas 中為 NaN) 轉成空字串 ""
+        # 這樣既能保持數值欄位的真實數值型態，又不會在寫入 Google Sheets 時出錯
+        processed_df = df.fillna("")
+        return processed_df  
+    except Exception as e:
+        logging.error(f"資料庫查詢失敗: {e}")
+        return None
+        
+def call_main_function(func_name: str, *args, **kwargs):
+    """Dynamically calls a function in main.py by name."""
+    main_module = sys.modules.get("__main__")
+
+    # Get the function attribute from main.py
+    func = getattr(main_module, func_name, None)
+
+    if callable(func):
+        return func(*args, **kwargs)
+    else:
+        raise AttributeError(
+            f"Function '{func_name}' not found or not callable in main.py"
+        )         
+
+def splitStringToArray(input):
+    if isinstance(input, str) and input:
+        names = [name.strip() for name in input.split(",")]
+        return names
+    else:
+        logging.error("設定檔錯誤：'run_mode' 為空或格式不正確。")
+        return None                

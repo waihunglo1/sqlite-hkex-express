@@ -5,17 +5,18 @@ import time
 import sys
 from typing import Any, Dict, List, Optional, Tuple
 from scipy import stats
-from common import basedbhelper as dbHelper
 
 import numpy as np
 import pandas as pd
 
+from . import basedbhelper as dbHelper
+from common import utility as helper
 
-
-class DailyPriceProcessor:
+class DailyPriceProcessor():
     
-    def __init__(self, dbHelper):
+    def __init__(self, dbHelper, whereClause):
         self.dbHelper = dbHelper
+        self.whereClause = whereClause
 
     # ----------------------------------------------------------------------
     # Helper Utilities
@@ -533,16 +534,20 @@ class DailyPriceProcessor:
             f"Normalization completed for [{query_date}] in {duration:.2f} ms"
         )
 
-
     def process_single_date(
         self, query_date: str, query_symbol: Optional[str] = None
     ) -> int:
         """Processes statistics calculation for a specific date and symbol."""
-        sql = """
-            SELECT P.symbol 
-            FROM DAILY_STOCK_PRICE P 
-            JOIN STOCK S ON P.symbol = S.symbol 
-            WHERE P.dt = ?
+        sql = f"""
+            SELECT 
+              P.symbol 
+            FROM 
+              DAILY_STOCK_PRICE P, 
+              STOCK S 
+            WHERE
+              P.symbol = S.symbol 
+              AND P.dt = ?
+              {self.whereClause}
         """
         params = [query_date]
 
@@ -605,9 +610,17 @@ class DailyPriceProcessor:
         else:
             sql = """
                 SELECT dt FROM ( 
-                    SELECT dt FROM DAILY_STOCK_PRICE 
-                    GROUP BY dt ORDER BY dt DESC LIMIT 200 
-                ) EXCEPT SELECT dt FROM DAILY_STOCK_STATS GROUP BY dt
+                    SELECT dt 
+                      FROM 
+                    DAILY_STOCK_PRICE 
+                      GROUP BY dt 
+                      ORDER BY dt DESC 
+                    LIMIT 200 
+                ) EXCEPT 
+                    SELECT dt 
+                      FROM 
+                    DAILY_STOCK_STATS 
+                      GROUP BY dt
                 ORDER BY dt
             """
 
@@ -615,8 +628,9 @@ class DailyPriceProcessor:
             dates = [r["dt"] for r in rows]
 
             for dt in dates:
-                logging.info(f"Processing date: {dt}")
-                count = self.process_single_date(dt)
+                logging.info(f"Start Processing date: {dt}")
+                with helper.time_it(f"process_single_date({dt})"):
+                    count = self.process_single_date(dt)
                 logging.info(f"Completed date: {dt}. Processed records: {count}")
 
         logging.info("Data processing run completed successfully.")

@@ -10,8 +10,9 @@ import pandas as pd
 import time
 from yahooquery import Ticker
 from pathlib import Path
+from common.basedbhelper import BaseDbHelper
 
-class SqliteDbHelper:
+class SqliteDbHelper(BaseDbHelper):
     """Helper class for managing SQLite database operations."""
 
     def __init__(self, db_path: str):
@@ -51,8 +52,8 @@ class SqliteDbHelper:
                     ''', (
                         row['symbol'], row['name'], row['industry'], 
                         row['sector'], row['marketCap'],
-                        row['industry_en'],row['sector_en'],
-                        row['quote_type']
+                        row['industry_en'], row['sector_en'],
+                        row['quoteType']
                         )
 
                     )
@@ -412,52 +413,16 @@ class SqliteDbHelper:
             logging.error(f"❌ ⚪ 未知錯誤: {e}")
             sys.exit()
 
-    def fetch_and_populate(self, sql, funcNames):
-        if not os.path.exists(self.db_path):
-            logging.errror(f"錯誤：找不到資料庫檔案 '{self.db_path}'")
-            return
-
+    def callbackWithConn(self, callback, sql, func_name):
         try:
-            logging.info("正在從 SQLite 讀取資料...")
-            conn = sqlite3.connect(self.db_path)
-
-            # --- PANDAS 優化：直接讀取為 DataFrame，保持真實的數據型態 (int, float, object) ---
-            df = pd.read_sql_query(sql, conn)
-            if df.empty:
-                logging.error("未找到任何資料。")
-                return None   
-
-            funcNamesList = self.splitStringToArray(funcNames)
-            for funcName in funcNamesList:
-                df = self.call_main_function(funcName, df, conn)
-
-            # 2. 資料清洗：將 SQLite 的 None (在 Pandas 中為 NaN) 轉成空字串 ""
-            # 這樣既能保持數值欄位的真實數值型態，又不會在寫入 Google Sheets 時出錯
-            processed_df = df.fillna("")
-            return processed_df  
+            with sqlite3.connect(self.db_path, timeout=10) as conn:
+                df = callback(conn, sql, func_name)
+                return df           
+        except sqlite3.Error as e:
+            logging.error(f"❌ ⚫ 其他 SQLite 錯誤: {e}")
+            sys.exit()
         except Exception as e:
-            logging.error(f"資料庫查詢失敗: {e}")
-            return None
-        finally:
-            conn.close()
-    def call_main_function(self, func_name: str, *args, **kwargs):
-        """Dynamically calls a function in main.py by name."""
-        main_module = sys.modules.get("__main__")
+            logging.error(f"❌ ⚪ 未知錯誤: {e}")
+            sys.exit() 
 
-        # Get the function attribute from main.py
-        func = getattr(main_module, func_name, None)
-
-        if callable(func):
-            return func(*args, **kwargs)
-        else:
-            raise AttributeError(
-                f"Function '{func_name}' not found or not callable in main.py"
-            )         
-
-    def splitStringToArray(self, input):
-        if isinstance(input, str) and input:
-            names = [name.strip() for name in input.split(",")]
-            return names
-        else:
-            logging.error("設定檔錯誤：'run_mode' 為空或格式不正確。")
-            return None                
+        

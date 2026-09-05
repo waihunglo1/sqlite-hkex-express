@@ -14,7 +14,7 @@ flat_df = df.reset_index()
 print(flat_df.head())
 
 # Instantiate Ticker with a list of symbols
-symbols = ["AAPL", "SPY", "AAPL240119C00150000", "0700.HK"]
+symbols = ["AAPL", "SPY", "AAPL240119C00150000", "0700.HK","QQQ"]
 tickers = Ticker(symbols)
 
 # Fetch quote type details

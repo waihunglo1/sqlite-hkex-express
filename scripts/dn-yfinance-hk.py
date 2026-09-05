@@ -8,6 +8,7 @@ import math
 import sys
 from basehk import config, sqliteDbHelper
 from common import translator as translaterHelper
+from common import utility as helper
 
 # Import the class from your utility file
 from yahooquery import Ticker
@@ -119,8 +120,9 @@ def dumpSectorStatistics(sqliteDbHelper):
         order by sector 
     """
     sectors = sqliteDbHelper.fetchAllRows(sectorSql)
-    df = pd.DataFrame(sectors)
-    logging.info("\n" + df.to_string())
+    helper.prettyPrint(sectors)
+
+
 
 #
 # Main program
