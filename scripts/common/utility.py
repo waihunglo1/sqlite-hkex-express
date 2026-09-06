@@ -299,5 +299,20 @@ def time_it(task_name: str):
         # This dynamically uses the correct logging level (INFO, DEBUG, etc.)
         logging.info(f"⏱️ {task_name} took {elapsed:.2f} seconds")    
 
+def splitStringToArray(input):
+    if isinstance(input, str) and input:
+        names = [name.strip() for name in input.split(",")]
+        return names
+    else:
+        logging.error("設定檔錯誤：'run_mode' 為空或格式不正確。")
+        return None  
+
+def sqlClean(sql:str):
+    if not str:
+        return str
+
+    cleaned = sql.replace("\r", " ").replace("\n", " ")
+    return cleaned
+    
 if __name__ == "__main__":
     logging.info("This is a different version of the module.py file.")    

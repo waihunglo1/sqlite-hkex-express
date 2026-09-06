@@ -4,7 +4,7 @@ cd "C:\Users\user\Documents\GitHub\sqlite-hkex-express"
 $OutputEncoding = [System.Text.Encoding]::UTF8
 
 # Define log file path and script paths
-$LogFile       = ".\temp\run-scripts.log"
+$LogFile       = ".\temp\run-scripts-hk.log"
 
 # Clear previous log file if it exists
 if (Test-Path $LogFile) { Remove-Item $LogFile }
@@ -19,12 +19,15 @@ Write-Host "Running Python script 02" -ForegroundColor Yellow
 cmd /c "py scripts/dn-yfinance-hk.py 2>&1" | Tee-Object -FilePath $LogFile -Append
 
 Write-Host "Running Python script 03" -ForegroundColor Yellow
-cmd /c "py scripts/proc-daily-price-hk.py 2>&1" | Tee-Object -FilePath $LogFile -Append
+cmd /c "py scripts/proc-daily-price.py --market hk 2>&1" | Tee-Object -FilePath $LogFile -Append
 
 Write-Host "Running Python script 03" -ForegroundColor Yellow
-cmd /c "py scripts/proc-statistics.py 2>&1" | Tee-Object -FilePath $LogFile -Append
+cmd /c "py scripts/proc-statistics.py --market hk 2>&1" | Tee-Object -FilePath $LogFile -Append
 
 Write-Host "Running Python script 04" -ForegroundColor Yellow
-cmd /c "py scripts/to-gsheet.py 2>&1" | Tee-Object -FilePath $LogFile -Append
+cmd /c "py scripts/to-gsheet.py --market hk 2>&1" | Tee-Object -FilePath $LogFile -Append
+
+Write-Host "Running Python script 05" -ForegroundColor Yellow
+cmd /c "py scripts/to-avien-postgres.py --market hk 2>&1" | Tee-Object -FilePath $LogFile -Append
 
 Write-Host "=== All scripts finished. Log saved to $LogFile ===" -ForegroundColor Green

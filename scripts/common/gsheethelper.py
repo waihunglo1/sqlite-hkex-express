@@ -32,8 +32,10 @@ def publish_gsheet(df, file, tabName):
     full_payload = [headers] + data_rows
     clean_payload = cleanPayload(full_payload)
 
+    # Concatenate first 3 columns and last 3 columns
+    df_subset = pd.concat([df.iloc[:, :3], df.iloc[:, -3:]], axis=1)
     logging.info("資料預覽（前 5 行）：")
-    logging.info(f"\n{df.head()}")   
+    logging.info(f"\n{df_subset.head()}")  
 
     # 2. 連接 Google Sheets 並寫入資料
     logging.info("正在連接 Google Sheets...")
