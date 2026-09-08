@@ -2,7 +2,7 @@ import argparse
 import importlib
 
 def parse_argument():
-# 1. Parse command-line flags
+    # 1. Parse command-line flags
     parser = argparse.ArgumentParser(description="Publish stock stats to Google Sheets")
     parser.add_argument(
         "--market",
@@ -14,8 +14,8 @@ def parse_argument():
 
     # 2. Dynamically import config and dbHelper based on market choice
     if args.market == "us":
-        from baseus import config, duckDbHelper as dbHelper  # or duckDbHelper
+        from baseus import config, duckDbHelper as dbHelper, avienUri  # or duckDbHelper
     else:
-        from basehk import config, sqliteDbHelper as dbHelper
+        from basehk import config, sqliteDbHelper as dbHelper, avienUri
 
-    return config, dbHelper
+    return config, dbHelper, avienUri

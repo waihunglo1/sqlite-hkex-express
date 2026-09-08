@@ -7,14 +7,14 @@ from common import utility as helper
 # Main program
 #
 if __name__ == "__main__": 
-    config, dbHelper = marketParameter.parse_argument()    
+    config, dbHelper, avienUri =  marketParameter.parse_argument()    
 
     # indexes data
     indexes_str = config['YAHOO-FINANCE']['INDEXES'] # ^GSPC, ^NDX
     indexes = helper.splitStringToArray(indexes_str)
 
     # processing
-    processor = StatisticsProcessor(dbHelper=dbHelper, indexes=indexes)
+    processor = StatisticsProcessor(dbHelper=dbHelper, avienUri=avienUri, indexes=indexes)
     processor.loadIndexDataByYahooFinance()
     processor.populateSectorStatistics(config)
     processor.populateMarketStatistics(config)

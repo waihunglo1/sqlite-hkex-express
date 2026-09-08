@@ -10,17 +10,9 @@ from common import market_parameter as marketParameter
 load_dotenv('.env')
 load_dotenv('.env.hk')
 
-# Retrieve environment variables
-AVIEN_DB_USER = os.getenv("AVIEN_DB_USER")
-AVIEN_DB_PASSWORD = os.getenv("AVIEN_DB_PASSWORD")
-AVIEN_DB_HOST = os.getenv("AVIEN_DB_HOST")
-AVIEN_DB_PORT = os.getenv("AVIEN_DB_PORT", "5432")
-AVIEN_DB_DATABASE = os.getenv("AVIEN_DB_DATABASE")
 
-# Construct connection string (Aiven requires sslmode=require)
-AVIEN_URI = f"postgresql://{AVIEN_DB_USER}:{AVIEN_DB_PASSWORD}@{AVIEN_DB_HOST}:{AVIEN_DB_PORT}/{AVIEN_DB_DATABASE}?sslmode=require"
 
-def push_df_to_aiven(table_name: str, df: pd.DataFrame):
+def push_df_to_aiven(table_name: str, df: pd.DataFrame, arienUri):
     """Clears target Aiven table and uploads DataFrame records in batch."""
     records = df.to_dict(orient="records")
     if not records:
@@ -29,7 +21,7 @@ def push_df_to_aiven(table_name: str, df: pd.DataFrame):
     columns = list(records[0].keys())
     sql_insert = f"INSERT INTO {table_name} ({', '.join(columns)}) VALUES ({', '.join([f'%({c})s' for c in columns])});"
 
-    with psycopg.connect(AVIEN_URI) as conn:
+    with psycopg.connect(arienUri) as conn:
         with conn.cursor() as cur:
             cur.execute(f"DELETE FROM {table_name};")
             cur.executemany(sql_insert, records)
@@ -85,11 +77,15 @@ def sync_daily_stock_stats(dbHelper):
         ]
         df_final.drop(columns=cols_to_drop, inplace=True)
 
-        # Upload to Aiven
-        push_df_to_aiven("daily_stock_stats", df_final)
+        return df_final
+
+
 
 
 if __name__ == "__main__":
-    config, dbHelper = marketParameter.parse_argument()        
-    sync_daily_stock_stats(dbHelper)
+    config, dbHelper, avienUri = marketParameter.parse_argument()        
+    df = sync_daily_stock_stats(dbHelper)
+
+    # Upload to Aiven
+    push_df_to_aiven("daily_stock_stats", df, avienUri)
 

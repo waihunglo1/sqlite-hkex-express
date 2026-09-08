@@ -642,5 +642,4 @@ class DuckDbHelper(BaseDbHelper):
             sys.exit()
         except Exception as e:
             logging.error(f"❌ ⚪ 未知錯誤: {e}")
-            sys.exit()                     
-                          
+            sys.exit()                                   

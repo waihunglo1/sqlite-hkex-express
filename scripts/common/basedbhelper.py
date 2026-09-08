@@ -30,5 +30,6 @@ class BaseDbHelper(ABC):
     def insertDailyStockPrice(self, prices: list[dict]) -> int:
         pass
 
+    @abstractmethod
     def readDataFrame(self, sql_main:str):
         pass    

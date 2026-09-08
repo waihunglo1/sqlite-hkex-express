@@ -12,7 +12,7 @@ QUERY_DATE = ""  # e.g., '20260730'
 QUERY_SYMBOL = ""  # e.g., '2697.HK'
 
 if __name__ == "__main__": 
-    config, dbHelper = marketParameter.parse_argument()
+    config, dbHelper, avienUri = marketParameter.parse_argument()
 
     # where clause
     where_clause_str = helper.sqlClean(config['DAILY_PRICE_PROCESSOR']['WHERE_CLAUSE'])

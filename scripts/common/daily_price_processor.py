@@ -590,6 +590,7 @@ class DailyPriceProcessor():
             return 0
 
         self.normalize_relative_strength(query_date, price_stats_list)
+        self.fillLast20DaysRelativeStrength(query_date, price_stats_list)
         updated = self.dbHelper.insertOrReplacePriceStats(price_stats_list)
         logging.info(f"Price Stats row : {len(price_stats_list)} / DB Updated : {updated}")
         
@@ -601,6 +602,61 @@ class DailyPriceProcessor():
         )
 
         return len(price_stats_list)
+
+    def fillLast20DaysRelativeStrength(self, query_date, price_stats_list):
+        logging.info(f"Start filling last 20 days relative strength {query_date}")
+
+        # price history row
+        historySql = """
+          SELECT 
+            normalise_rs, 
+            sctr 
+          FROM 
+            DAILY_STOCK_STATS 
+          WHERE 
+            symbol = ? 
+            AND dt < ? 
+          ORDER BY dt DESC LIMIT 19"""
+
+        for price_stats in price_stats_list:
+            params = [price_stats["symbol"], query_date]
+            history_rows = self.dbHelper.fetchAllRows(historySql, params)
+            price_stats["normalise_rs1"] = price_stats["normalise_rs"]
+
+            # Extract normalized_rs and sctr lists from fetched rows
+            rs_values = [
+                row["normalise_rs"] if isinstance(row, dict) else row[0]
+                for row in history_rows
+            ]
+            sctr_values = [
+                row["sctr"] if isinstance(row, dict) else row[1]
+                for row in history_rows
+            ]
+
+            # Dynamically set normalized_rs1..20 and sctr1..20
+            for i in range(2, 20):
+                idx = i - 2
+                
+                rs_val = (
+                    rs_values[idx]
+                    if idx < len(rs_values) and rs_values[idx] is not None
+                    else 0
+                )
+                sctr_val = (
+                    sctr_values[idx]
+                    if idx < len(sctr_values) and sctr_values[idx] is not None
+                    else 0
+                )
+
+                # Assign to dictionary or object attributes dynamically
+                if isinstance(price_stats, dict):
+                    price_stats[f"normalise_rs{i}"] = rs_val
+                    price_stats[f"sctr{i}"] = sctr_val
+                else:
+                    setattr(price_stats, f"normalise_rs{i}", rs_val)
+                    setattr(price_stats, f"sctr{i}", sctr_val)
+
+
 
     def process_data_local(self, queryDate, querySymbol) -> None:
         """Main task execution flow."""

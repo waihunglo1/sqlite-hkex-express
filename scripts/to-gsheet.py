@@ -90,6 +90,6 @@ def populate(config, dbHelper, id):
     _publish_with_retry(df, targetFile, tabName) 
 
 if __name__ == "__main__":
-    config, dbHelper = marketParameter.parse_argument()
+    config, dbHelper, avienUri  = marketParameter.parse_argument()
     populate(config, dbHelper, 'GOOGLE-SPREADSHEET-01')
     populate(config, dbHelper, 'GOOGLE-SPREADSHEET-02')

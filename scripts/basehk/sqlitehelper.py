@@ -436,6 +436,5 @@ class SqliteDbHelper(BaseDbHelper):
         except Exception as e:
             logging.error(f"❌ ⚪ 未知錯誤: {e}")
             sys.exit()         
-
-
+ 
         
