@@ -18,3 +18,4 @@ if __name__ == "__main__":
     processor.loadIndexDataByYahooFinance()
     processor.populateSectorStatistics(config)
     processor.populateMarketStatistics(config)
+    processor.populateAvien(config)

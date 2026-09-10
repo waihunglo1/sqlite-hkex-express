@@ -12,10 +12,10 @@ if (Test-Path $LogFile) { Remove-Item $LogFile }
 Write-Host "=== Starting Script Executions ===" -ForegroundColor Cyan
 
 # 1. Run Python Script
-Write-Host "Running Python script 02" -ForegroundColor Yellow
+Write-Host "Running Python script 01" -ForegroundColor Yellow
 cmd /c "py scripts/dn-yfinance-us.py 2>&1" | Tee-Object -FilePath $LogFile -Append
 
-Write-Host "Running Python script 03" -ForegroundColor Yellow
+Write-Host "Running Python script 02" -ForegroundColor Yellow
 cmd /c "py scripts/proc-daily-price.py --market us 2>&1" | Tee-Object -FilePath $LogFile -Append
 
 Write-Host "Running Python script 03" -ForegroundColor Yellow

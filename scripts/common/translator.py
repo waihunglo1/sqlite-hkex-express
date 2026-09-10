@@ -161,6 +161,7 @@ _INDUSTRY_RAW = {
     "Utilities - Independent Power Producers": "獨立電力生產商",
     "Utilities - Regulated Electric": "受管制電力公用事業",
     "Utilities - Renewable": "再生能源公用事業",
+    "Utilities - Diversified" : "多元化",
     "Waste Management": "廢棄物管理",
     "Discount Stores" : "折扣店",
     "Healthcare Plans" : "醫療保健計劃",

@@ -616,12 +616,13 @@ class DailyPriceProcessor():
           WHERE 
             symbol = ? 
             AND dt < ? 
-          ORDER BY dt DESC LIMIT 19"""
+          ORDER BY dt DESC LIMIT 20"""
 
         for price_stats in price_stats_list:
             params = [price_stats["symbol"], query_date]
             history_rows = self.dbHelper.fetchAllRows(historySql, params)
             price_stats["normalise_rs1"] = price_stats["normalise_rs"]
+            price_stats["sctr1"] = price_stats["sctr"]
 
             # Extract normalized_rs and sctr lists from fetched rows
             rs_values = [
@@ -634,7 +635,7 @@ class DailyPriceProcessor():
             ]
 
             # Dynamically set normalized_rs1..20 and sctr1..20
-            for i in range(2, 20):
+            for i in range(2, 21):
                 idx = i - 2
                 
                 rs_val = (

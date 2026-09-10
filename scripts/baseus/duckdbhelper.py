@@ -409,7 +409,15 @@ class DuckDbHelper(BaseDbHelper):
                     "sma20turnover", "sma50turnover", "above_200d_sma", "above_150d_sma", "above_100d_sma", "above_50d_sma",
                     "above_20d_sma", "above_10d_sma", "above_5d_sma", "vp_high", "vp_low", "vp_bullish", "vp_bearish",
                     "rs", "normalise_rs", "rs_priceOverSMA20", "rs_slopeSMA20", "rs_slopeSMA50", "rs_slopeSMA150",
-                    "priceOverSMA20", "slopeSMA20", "slopeSMA50", "slopeSMA150", "adr20", "adr05", "slopeAdr20", "slopeAdr05"
+                    "priceOverSMA20", "slopeSMA20", "slopeSMA50", "slopeSMA150", "adr20", "adr05", "slopeAdr20", "slopeAdr05",
+                    "normalise_rs1","normalise_rs2","normalise_rs3","normalise_rs4","normalise_rs5",
+                    "normalise_rs6","normalise_rs7","normalise_rs8","normalise_rs9","normalise_rs10",
+                    "normalise_rs11","normalise_rs12","normalise_rs13","normalise_rs14","normalise_rs15",
+                    "normalise_rs16","normalise_rs17","normalise_rs18","normalise_rs19","normalise_rs20",
+                    "sctr1","sctr2","sctr3","sctr4","sctr5",                        
+                    "sctr6","sctr7","sctr8","sctr9","sctr10",  
+                    "sctr11","sctr12","sctr13","sctr14","sctr15",  
+                    "sctr16","sctr17","sctr18","sctr19","sctr20"
                 ]].itertuples(index=False, name=None))
                 
                 # 3. Native bulk upsert via executemany
@@ -423,12 +431,30 @@ class DuckDbHelper(BaseDbHelper):
                         sma20turnover, sma50turnover, above_200d_sma, above_150d_sma, above_100d_sma, above_50d_sma, 
                         above_20d_sma, above_10d_sma, above_5d_sma, vp_high, vp_low, vp_bullish, vp_bearish,
                         rs, normalise_rs, rs_priceOverSMA20, rs_slopeSMA20, rs_slopeSMA50, rs_slopeSMA150,
-                        priceOverSMA20, slopeSMA20, slopeSMA50, slopeSMA150, adr20, adr05, slopeAdr20, slopeAdr05
+                        priceOverSMA20, slopeSMA20, slopeSMA50, slopeSMA150, adr20, adr05, slopeAdr20, slopeAdr05,
+                        normalise_rs1,normalise_rs2,normalise_rs3,normalise_rs4,normalise_rs5,
+                        normalise_rs6,normalise_rs7,normalise_rs8,normalise_rs9,normalise_rs10,
+                        normalise_rs11,normalise_rs12,normalise_rs13,normalise_rs14,normalise_rs15,
+                        normalise_rs16,normalise_rs17,normalise_rs18,normalise_rs19,normalise_rs20,
+                        sctr1,sctr2,sctr3,sctr4,sctr5,                        
+                        sctr6,sctr7,sctr8,sctr9,sctr10,  
+                        sctr11,sctr12,sctr13,sctr14,sctr15,  
+                        sctr16,sctr17,sctr18,sctr19,sctr20
                     ) 
                     VALUES (
                         ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
                         ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+                        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+
+                        ?,?,?,?,?,
+                        ?,?,?,?,?,
+                        ?,?,?,?,?,
+                        ?,?,?,?,?,
+
+                        ?,?,?,?,?,
+                        ?,?,?,?,?,
+                        ?,?,?,?,?,
+                        ?,?,?,?,?
                     )
                     ON CONFLICT (symbol, dt) DO UPDATE SET
                         start_dt = EXCLUDED.start_dt,
@@ -497,7 +523,47 @@ class DuckDbHelper(BaseDbHelper):
                         adr20 = EXCLUDED.adr20,
                         adr05 = EXCLUDED.adr05,
                         slopeAdr20 = EXCLUDED.slopeAdr20,
-                        slopeAdr05 = EXCLUDED.slopeAdr05    
+                        slopeAdr05 = EXCLUDED.slopeAdr05,
+                        normalise_rs1 = EXCLUDED.normalise_rs1,
+                        normalise_rs2 = EXCLUDED.normalise_rs2,
+                        normalise_rs3 = EXCLUDED.normalise_rs3,
+                        normalise_rs4 = EXCLUDED.normalise_rs4,
+                        normalise_rs5 = EXCLUDED.normalise_rs5,
+                        normalise_rs6 = EXCLUDED.normalise_rs6,
+                        normalise_rs7 = EXCLUDED.normalise_rs7,
+                        normalise_rs8 = EXCLUDED.normalise_rs8,
+                        normalise_rs9 = EXCLUDED.normalise_rs9,
+                        normalise_rs10 = EXCLUDED.normalise_rs10,
+                        normalise_rs11 = EXCLUDED.normalise_rs11,
+                        normalise_rs12 = EXCLUDED.normalise_rs12,
+                        normalise_rs13 = EXCLUDED.normalise_rs13,
+                        normalise_rs14 = EXCLUDED.normalise_rs14,
+                        normalise_rs15 = EXCLUDED.normalise_rs15,
+                        normalise_rs16 = EXCLUDED.normalise_rs16,
+                        normalise_rs17 = EXCLUDED.normalise_rs17,
+                        normalise_rs18 = EXCLUDED.normalise_rs18,
+                        normalise_rs19 = EXCLUDED.normalise_rs19,
+                        normalise_rs20 = EXCLUDED.normalise_rs20,
+                        sctr1 = EXCLUDED.sctr1,
+                        sctr2 = EXCLUDED.sctr2,
+                        sctr3 = EXCLUDED.sctr3,
+                        sctr4 = EXCLUDED.sctr4,
+                        sctr5 = EXCLUDED.sctr5,                        
+                        sctr6 = EXCLUDED.sctr6,
+                        sctr7 = EXCLUDED.sctr7,
+                        sctr8 = EXCLUDED.sctr8,
+                        sctr9 = EXCLUDED.sctr9,
+                        sctr10 = EXCLUDED.sctr10,  
+                        sctr11 = EXCLUDED.sctr11,
+                        sctr12 = EXCLUDED.sctr12,
+                        sctr13 = EXCLUDED.sctr13,
+                        sctr14 = EXCLUDED.sctr14,
+                        sctr15 = EXCLUDED.sctr15,  
+                        sctr16 = EXCLUDED.sctr16,
+                        sctr17 = EXCLUDED.sctr17,
+                        sctr18 = EXCLUDED.sctr18,
+                        sctr19 = EXCLUDED.sctr19,
+                        sctr20 = EXCLUDED.sctr20
                 ''', data_to_insert)
                 
                 updated = cursor.rowcount

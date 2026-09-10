@@ -272,14 +272,30 @@ class SqliteDbHelper(BaseDbHelper):
                         sma20turnover, sma50turnover, above_200d_sma ,above_150d_sma ,above_100d_sma ,above_50d_sma, 
                         above_20d_sma ,above_10d_sma ,above_5d_sma, vp_high, vp_low, vp_bullish, vp_bearish,
                         rs, normalise_rs, rs_priceOverSMA20, rs_slopeSMA20, rs_slopeSMA50, rs_slopeSMA150,
-                        priceOverSMA20, slopeSMA20, slopeSMA50, slopeSMA150, adr20, adr05, slopeAdr20, slopeAdr05
+                        priceOverSMA20, slopeSMA20, slopeSMA50, slopeSMA150, adr20, adr05, slopeAdr20, slopeAdr05,
+                        normalise_rs1,normalise_rs2,normalise_rs3,normalise_rs4,normalise_rs5,
+                        normalise_rs6,normalise_rs7,normalise_rs8,normalise_rs9,normalise_rs10,
+                        normalise_rs11,normalise_rs12,normalise_rs13,normalise_rs14,normalise_rs15,
+                        normalise_rs16,normalise_rs17,normalise_rs18,normalise_rs19,normalise_rs20,
+                        sctr1,sctr2,sctr3,sctr4,sctr5,                        
+                        sctr6,sctr7,sctr8,sctr9,sctr10,  
+                        sctr11,sctr12,sctr13,sctr14,sctr15,  
+                        sctr16,sctr17,sctr18,sctr19,sctr20                   
                         )   
                         VALUES 
                         (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
                         ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
                         ?, ?, ?, ?, ?, ?, 
                         ?, ?, ?, ?,
-                        ?, ?, ?, ?
+                        ?, ?, ?, ?,
+                        ?,?,?,?,?,
+                        ?,?,?,?,?,
+                        ?,?,?,?,?,
+                        ?,?,?,?,?,
+                        ?,?,?,?,?,
+                        ?,?,?,?,?,
+                        ?,?,?,?,?,
+                        ?,?,?,?,?
                         )
                     ''', (
                         row["symbol"],
@@ -350,7 +366,15 @@ class SqliteDbHelper(BaseDbHelper):
                         row["adr20"],
                         row["adr05"],
                         row["slopeAdr20"],
-                        row["slopeAdr05"]                                             
+                        row["slopeAdr05"],
+                        row["normalise_rs1"],row["normalise_rs2"],row["normalise_rs3"],row["normalise_rs4"],row["normalise_rs5"],
+                        row["normalise_rs6"],row["normalise_rs7"],row["normalise_rs8"],row["normalise_rs9"],row["normalise_rs10"],
+                        row["normalise_rs11"],row["normalise_rs12"],row["normalise_rs13"],row["normalise_rs14"],row["normalise_rs15"],
+                        row["normalise_rs16"],row["normalise_rs17"],row["normalise_rs18"],row["normalise_rs19"],row["normalise_rs20"],
+                        row["sctr1"],row["sctr2"],row["sctr3"],row["sctr4"],row["sctr5"],                        
+                        row["sctr6"],row["sctr7"],row["sctr8"],row["sctr9"],row["sctr10"],  
+                        row["sctr11"],row["sctr12"],row["sctr13"],row["sctr14"],row["sctr15"],  
+                        row["sctr16"],row["sctr17"],row["sctr18"],row["sctr19"],row["sctr20"]              
                     ))
                     updated += cursor.rowcount
                 

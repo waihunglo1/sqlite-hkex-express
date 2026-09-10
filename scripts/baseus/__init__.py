@@ -16,6 +16,17 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S'  # 精簡時間格式
 )
 
+def avienConnectionString():
+    # Retrieve environment variables
+    AVIEN_DB_USER = os.getenv("AVIEN_DB_USER")
+    AVIEN_DB_PASSWORD = os.getenv("AVIEN_DB_PASSWORD")
+    AVIEN_DB_HOST = os.getenv("AVIEN_DB_HOST")
+    AVIEN_DB_PORT = os.getenv("AVIEN_DB_PORT", "5432")
+    AVIEN_DB_DATABASE = os.getenv("AVIEN_DB_DATABASE")
+
+    # Construct connection string (Aiven requires sslmode=require)
+    AVIEN_URI = f"postgresql://{AVIEN_DB_USER}:{AVIEN_DB_PASSWORD}@{AVIEN_DB_HOST}:{AVIEN_DB_PORT}/{AVIEN_DB_DATABASE}?sslmode=require"
+    return AVIEN_URI
 analyst_ini_path = os.getenv("ANALYST_DATA_INI")
 config = configparser.ConfigParser()
 
@@ -27,7 +38,7 @@ if analyst_ini_path and os.path.exists(analyst_ini_path):
     duckFile = config['DUCKDB']['FILE']
     logging.info(f"DUCKDB : {duckFile}")  
     duckDbHelper = DuckDbHelper(duckFile)   
-
+    avienUri = avienConnectionString()  
 else:
     logging.warning("ANALYST_DATA_INI path is missing or invalid.")
     sys.exit(1)
