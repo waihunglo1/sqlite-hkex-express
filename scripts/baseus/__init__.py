@@ -46,8 +46,8 @@ if analyst_ini_path and os.path.exists(analyst_ini_path):
     logging.info("Initialization complete: Loaded INI config.")
 
     # duck file
-    duckFile = config['DUCKDB']['FILE']
-    logging.info(f"DUCKDB : {duckFile}")  
+    # duckFile = config['DUCKDB']['FILE']
+    # logging.info(f"DUCKDB : {duckFile}")  
     # duckDbHelper = DuckDbHelper(duckFile)   
 
     sqliteFile = config['SQLITE']['FILE']
