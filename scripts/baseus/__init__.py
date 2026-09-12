@@ -3,6 +3,7 @@ import logging
 import os
 import sys
 from .duckdbhelper import DuckDbHelper
+from .sqlite_helper import SqliteDbHelper
 from dotenv import load_dotenv
 
 # Execute initialization immediately on package import
@@ -37,6 +38,7 @@ config = configparser.ConfigParser()
 
 # Force UTF-8 output streams for standard terminal logging
 sys.stdout.reconfigure(encoding="utf-8")
+sys.stderr.reconfigure(encoding="utf-8")
 
 # read init
 if analyst_ini_path and os.path.exists(analyst_ini_path):
@@ -46,7 +48,13 @@ if analyst_ini_path and os.path.exists(analyst_ini_path):
     # duck file
     duckFile = config['DUCKDB']['FILE']
     logging.info(f"DUCKDB : {duckFile}")  
-    duckDbHelper = DuckDbHelper(duckFile)   
+    # duckDbHelper = DuckDbHelper(duckFile)   
+
+    sqliteFile = config['SQLITE']['FILE']
+    logging.info(f"SQLITE : {sqliteFile}")
+    duckDbHelper = SqliteDbHelper(sqliteFile)
+
+    # avienUri
     avienUri = avienConnectionString()  
 else:
     logging.warning("ANALYST_DATA_INI path is missing or invalid.")

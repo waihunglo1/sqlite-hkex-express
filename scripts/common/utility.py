@@ -283,15 +283,8 @@ def prettyPrint(sectors):
     df["Sector"] = df["Sector"].replace("", "UNASSIGNED").fillna("UNASSIGNED")
 
     # Print clean string representation
-    log_table = df.to_string(index=False, justify="left")
+    log_table = df.to_markdown(index=False, tablefmt="plain")
     logging.info(f"\nSector Summary:\n{log_table}")
-
-def prettyPrintv2(sectors):
-    # Fixed width formatting (left-align sector to 30 chars, right-align count to 8)
-    for sector, count in sectors.items():
-        # Replace None/NaN with a fallback clean string
-        sector_name = sector if sector else "UNASSIGNED"
-        logging.info(f"{sector_name:<30} {count:>8}")
 
 @contextmanager
 def time_it(task_name: str):
@@ -320,6 +313,12 @@ def sqlClean(sql:str):
 
     cleaned = sql.replace("\r", " ").replace("\n", " ")
     return cleaned
+
+# Ensure numeric fields default to 0.0 instead of None
+def safe_float(val, default=0.0):
+    if val is None or pd.isna(val):
+        return default
+    return float(val)
     
 if __name__ == "__main__":
     logging.info("This is a different version of the module.py file.")    

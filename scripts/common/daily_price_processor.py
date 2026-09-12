@@ -208,7 +208,7 @@ class DailyPriceProcessor():
                 stats_dict["chg_pct_1d"] = 0.0
 
         # Above SMA flags
-        c = stats_dict["close"]
+        c = helper.safe_float(stats_dict["close"])
         for period in [5, 10, 20, 50, 100, 150, 200]:
             sma_val = stats_dict.get(f"sma{period:02d}" if period < 100 else f"sma{period}", 0)
             stats_dict[f"above_{period}d_sma"] = 1 if sma_val and c >= sma_val else 0
@@ -396,7 +396,8 @@ class DailyPriceProcessor():
             self.calculate_sctr_base(stats_dict)
             self.calculate_volume_profile(price_history, stats_dict)
         except Exception as e:
-            logging.error(f"❌ [{symbol}] 未知錯誤: {e} / {symbol}")
+            # logging.error(f"❌ Symbol:[{symbol}] 未知錯誤: {e}")
+            logging.exception(f"❌ Symbol:[{symbol}] 未知錯誤")
             sys.exit(1)
 
         if stats_history:

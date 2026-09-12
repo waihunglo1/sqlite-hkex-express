@@ -4,6 +4,7 @@ import os
 import sys
 from dotenv import load_dotenv
 from .sqlitehelper import SqliteDbHelper
+from .duckdb_helper import DuckDbHelper
 
 # Execute initialization immediately on package import
 load_dotenv('.env')
@@ -35,6 +36,7 @@ def avienConnectionString():
 
 # Force UTF-8 output streams for standard terminal logging
 sys.stdout.reconfigure(encoding="utf-8")
+sys.stderr.reconfigure(encoding="utf-8")
 
 # read init
 analyst_ini_path = os.getenv("ANALYST_DATA_INI")
@@ -48,6 +50,8 @@ if analyst_ini_path and os.path.exists(analyst_ini_path):
     sqliteFile = config['SQLITE']['FILE']
     logging.info(f"SQLITE : {sqliteFile}") 
     sqliteDbHelper = SqliteDbHelper(sqliteFile) 
+
+    # avienUri
     avienUri = avienConnectionString()  
 
 else:

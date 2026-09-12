@@ -41,7 +41,13 @@ def tickersFromXls(hkexConfig):
     return column_hashmap
 
 def doYahooQuery(sqliteDbHelper, tickerBatch, errorRecords, tickerMap):
-    tickers = Ticker(tickerBatch, country="hong kong")
+    # Set explicit request headers to reduce blocking risk
+    tickers = Ticker(
+        tickerBatch,
+        country="hong kong",
+        asynchronous=False,  # Sequential mode prevents concurrent burst requests
+        max_workers=4,  # Limits concurrent worker threads
+    )
 
     # 1. 獲取數據
     # Fetch the raw data dictionaries
@@ -121,24 +127,23 @@ def dumpSectorStatistics(sqliteDbHelper):
     """
     sectors = sqliteDbHelper.fetchAllRows(sectorSql)
     helper.prettyPrint(sectors)
-    helper.prettyPrintv2(sectors)
 
+def extractTickerNameSectors(config, sqliteDbHelper):
+    # read xls
+    hkexConfig = config['HKEX']
+    tickerMap = tickersFromXls(hkexConfig)
+    logging.info(f"TICKERS SIZE : {len(tickerMap)}")
+
+    # Split ticker_list into batches of items
+    errorRecords = yahooQueryStockInfo(sqliteDbHelper, tickerMap)
+    if len(errorRecords) > 0:
+        df = pd.DataFrame(errorRecords)
+        logging.info("\n" + df.to_markdown(index=False).strip())      
 
 
 #
 # Main program
 #
 if __name__ == "__main__": 
-    # read xls
-    hkexConfig = config['HKEX']
-    tickerMap = tickersFromXls(hkexConfig)
-    logging.info(f"SIZE : {len(tickerMap)}")
-
-    # Split ticker_list into batches of items
-    errorRecords = yahooQueryStockInfo(sqliteDbHelper, tickerMap)
-    if len(errorRecords) > 0:
-        df = pd.DataFrame(errorRecords)
-        logging.info("\n" + df.to_markdown(index=False).strip())  
-
-    # dump sector and industry statistics
+    extractTickerNameSectors(config, sqliteDbHelper)
     dumpSectorStatistics(sqliteDbHelper)    
