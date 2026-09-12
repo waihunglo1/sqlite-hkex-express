@@ -686,10 +686,10 @@ class DuckDbHelper(BaseDbHelper):
 
         return updated      
 
-    def callbackWithConn(self, callback, sql, func_name):
+    def callbackWithConn(self, callback, sql):
         try:
             with duckdb.connect(self.db_path) as conn:
-                df = callback(conn, sql, func_name)
+                df = callback(conn, sql)
                 return df           
         except duckdb.Error as e:
             logging.error(f"❌ ⚫ 其他 SQLite 錯誤: {e}")

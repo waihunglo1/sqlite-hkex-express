@@ -73,7 +73,7 @@ def publish_gsheet(df, file, tabName):
     except Exception as e:
         logging.error(f"發生錯誤：{e}  {file} / {tabName}")
 
-def fetch_and_populate(conn, sql, funcNames):
+def fetch_and_populate(conn, sql):
     try:
         logging.info("正在從 DB 讀取資料...")
 
@@ -82,10 +82,6 @@ def fetch_and_populate(conn, sql, funcNames):
         if df.empty:
             logging.error("未找到任何資料。")
             return None   
-
-        funcNamesList = splitStringToArray(funcNames)
-        for funcName in funcNamesList:
-            df = call_main_function(funcName, df, conn)
 
         # 2. 資料清洗：將 SQLite 的 None (在 Pandas 中為 NaN) 轉成空字串 ""
         # 這樣既能保持數值欄位的真實數值型態，又不會在寫入 Google Sheets 時出錯

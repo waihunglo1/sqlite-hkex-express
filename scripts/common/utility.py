@@ -286,6 +286,13 @@ def prettyPrint(sectors):
     log_table = df.to_string(index=False, justify="left")
     logging.info(f"\nSector Summary:\n{log_table}")
 
+def prettyPrintv2(sectors):
+    # Fixed width formatting (left-align sector to 30 chars, right-align count to 8)
+    for sector, count in sectors.items():
+        # Replace None/NaN with a fallback clean string
+        sector_name = sector if sector else "UNASSIGNED"
+        logging.info(f"{sector_name:<30} {count:>8}")
+
 @contextmanager
 def time_it(task_name: str):
     """

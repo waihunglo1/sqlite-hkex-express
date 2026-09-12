@@ -121,6 +121,7 @@ def dumpSectorStatistics(sqliteDbHelper):
     """
     sectors = sqliteDbHelper.fetchAllRows(sectorSql)
     helper.prettyPrint(sectors)
+    helper.prettyPrintv2(sectors)
 
 
 

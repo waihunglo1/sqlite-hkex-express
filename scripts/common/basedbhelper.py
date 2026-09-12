@@ -33,3 +33,7 @@ class BaseDbHelper(ABC):
     @abstractmethod
     def readDataFrame(self, sql_main:str):
         pass    
+
+    @abstractmethod
+    def callbackWithConn(self, callback, sql):
+        pass

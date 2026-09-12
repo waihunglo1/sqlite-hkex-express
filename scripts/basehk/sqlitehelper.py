@@ -437,10 +437,10 @@ class SqliteDbHelper(BaseDbHelper):
             logging.error(f"❌ ⚪ 未知錯誤: {e}")
             sys.exit()
 
-    def callbackWithConn(self, callback, sql, func_name):
+    def callbackWithConn(self, callback, sql):
         try:
             with sqlite3.connect(self.db_path, timeout=10) as conn:
-                df = callback(conn, sql, func_name)
+                df = callback(conn, sql)
                 return df           
         except sqlite3.Error as e:
             logging.error(f"❌ ⚫ 其他 SQLite 錯誤: {e}")

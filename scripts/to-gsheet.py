@@ -20,69 +20,17 @@ from common import market_parameter as marketParameter
     reraise=True,
 )
 
-def fillStocksRelativeStrength(df, conn):   
-    logging.info("正在為每檔股票填充前 20 日的歷史 Normalize RS 數據...")    
-    records = df.to_dict('records')
-    for row in records:
-        fill_column(row, conn, "normalise_rs")
-
-    # 4. 將擴充完（多了 20 個欄位）的字典列表，重新轉回 DataFrame
-    extended_df = pd.DataFrame(records)  
-    return extended_df  
-
-def fillStocksSCTR(df, conn):    
-    logging.info("正在為每檔股票填充前 20 日的歷史 SCTR 數據...")    
-    records = df.to_dict('records')
-    for row in records:
-        fill_column(row, conn, "sctr")
-
-    # 4. 將擴充完（多了 20 個欄位）的字典列表，重新轉回 DataFrame
-    extended_df = pd.DataFrame(records)  
-    return extended_df  
-
-def fill_column(df, conn, columnName):
-    sql_rs = f"SELECT {columnName} FROM DAILY_STOCK_STATS WHERE symbol = ? ORDER BY dt DESC LIMIT 20"
-    cursor = conn.cursor()
-    cursor.execute(sql_rs, (df["symbol"],))
-    
-    rs_list = [row[0] for row in cursor.fetchall()]
-    
-    if len(rs_list) < 20:
-        logging.info(f"Not enough rs data for {df['symbol']}. Only {len(rs_list)} records found.")
-        rs_list += [0] * (20 - len(rs_list))
-        
-    # 動態寫入 daily_stat["normalise_rs1"] 到 daily_stat["normalise_rs20"]
-    for i, val in enumerate(rs_list, start=1):
-        df[f"{columnName}{i}"] = val if val is not None else 0    
-
-def dummyFunc(df, conn):
-    logging.info("Dummy Func called")  
-    return df          
-
 def _publish_with_retry(df, file, tabName):
     gsheetHelper.publish_gsheet(df, file, tabName)
 
-def moveColumns(df, moveColsToEnd):
-    colNames = helper.splitStringToArray(moveColsToEnd) or []
-    if len(colNames) > 0:
-        for colName in colNames:
-            col = df.pop(colName)
-            df[colName] = col
-        df = df.copy()
-
-def fetch_and_populate(conn, sql, func_name):        
-    df = gsheetHelper.fetch_and_populate(conn, sql, func_name)
+def fetch_and_populate(conn, sql):        
+    df = gsheetHelper.fetch_and_populate(conn, sql)
     return df
 
 def populate(config, dbHelper, id):
     # step1 query data from sqlite file
     sql = config[id]['SQL']
-    funcNames = config[id]['FUNCTION_NAME']
-    df = dbHelper.callbackWithConn(fetch_and_populate, sql, funcNames)
-
-    # move columns to end of dataframe
-    moveColsToEnd = config[id]['MOVE_COLS_TO_END']
-    moveColumns(df, moveColsToEnd)
+    df = dbHelper.callbackWithConn(fetch_and_populate, sql)
 
     # publish to google-sheet
     targetFile = config[id]['FILE']

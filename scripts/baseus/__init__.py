@@ -30,6 +30,15 @@ def avienConnectionString():
 analyst_ini_path = os.getenv("ANALYST_DATA_INI")
 config = configparser.ConfigParser()
 
+
+#
+# INIT
+#
+
+# Force UTF-8 output streams for standard terminal logging
+sys.stdout.reconfigure(encoding="utf-8")
+
+# read init
 if analyst_ini_path and os.path.exists(analyst_ini_path):
     config.read(analyst_ini_path, encoding="utf-8")
     logging.info("Initialization complete: Loaded INI config.")
