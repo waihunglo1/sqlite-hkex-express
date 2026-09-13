@@ -2,16 +2,10 @@
 import sqlite3
 import logging
 import sys
-import yfinance as yf
 import pandas as pd
 import sqlite3
-import os
 import pandas as pd
-import time
-from yahooquery import Ticker
-from pathlib import Path
 from common.basedbhelper import BaseDbHelper
-
 class SqliteDbHelper(BaseDbHelper):
     """Helper class for managing SQLite database operations."""
 
@@ -444,10 +438,10 @@ class SqliteDbHelper(BaseDbHelper):
                 return df           
         except sqlite3.Error as e:
             logging.error(f"❌ ⚫ 其他 SQLite 錯誤: {e}")
-            sys.exit()
+            sys.exit(1)
         except Exception as e:
             logging.error(f"❌ ⚪ 未知錯誤: {e}")
-            sys.exit() 
+            sys.exit(1) 
 
     def readDataFrame(self, sql_main):
         try:
@@ -456,9 +450,9 @@ class SqliteDbHelper(BaseDbHelper):
                 return df_main           
         except sqlite3.Error as e:
             logging.error(f"❌ ⚫ 其他 SQLite 錯誤: {e}")
-            sys.exit()
+            sys.exit(1)
         except Exception as e:
             logging.error(f"❌ ⚪ 未知錯誤: {e}")
-            sys.exit()         
+            sys.exit(1)         
  
         

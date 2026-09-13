@@ -22,7 +22,7 @@ def downloadStockList(hkexConfig):
   # download hkex stock list
   targetUrl = hkexConfig['URL']
   downloadPath = hkexConfig['DOWNLOAD_PATH']
-  downloadFileName = hkexConfig['listOfSecurities']
+  # downloadFileName = hkexConfig['LIST_OF_SECURITIES']
   helper.downloadByChrome(targetUrl, downloadPath)     
 
 def downloadHistoricalQuoteFile(hkexConfig):

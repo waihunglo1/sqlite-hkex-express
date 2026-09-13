@@ -105,7 +105,7 @@ def hkBackupFile():
 def usBackupFile():
     config = configparser.ConfigParser()
     config.read('config/analyst-data-us.ini', encoding='utf-8')
-    sqliteConfig = config['DUCKDB']
+    sqliteConfig = config['SQLITE']
     fileName = sqliteConfig['FILE']
     return fileName
 

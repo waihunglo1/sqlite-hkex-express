@@ -94,7 +94,7 @@ class StatisticsProcessor():
 
 
     def populateSectorStatistics(self, config):
-        sql = config['SECTOR-STATS-01']['SQL']
+        sql = config['STATISTICS_PROCESSOR']['SECTOR_STATS_SQL']
         sector_stats = self.dbHelper.fetchAllRows(sql)
 
         stats = self.newSectorStats()
@@ -150,7 +150,7 @@ class StatisticsProcessor():
 
 
     def populateMarketStatistics(self, config):
-        sql = config['MARKET-STATS-01']['SQL']
+        sql = config['STATISTICS_PROCESSOR']['MARKET_STATS_SQL']
         market_stats = self.dbHelper.fetchAllRows(sql)
 
         params = [
@@ -181,7 +181,7 @@ class StatisticsProcessor():
         logging.info(f"Market stats updated. Total records: {len(market_stats)} / Row updated : {updatedRow}")
 
     def populateAvien(self, config):
-        df = self.populate_daily_stock_stats(self.dbHelper)
+        df = self.populate_daily_stock_stats(self.dbHelper, config)
         self.push_df_to_aiven("daily_stock_stats", df)
 
     def push_df_to_aiven(self, table_name: str, df: pd.DataFrame):
@@ -200,13 +200,8 @@ class StatisticsProcessor():
             conn.commit()
         logging.info(f"Successfully pushed {len(records)} rows to Aiven [{table_name}]")
 
-    def populate_daily_stock_stats(self, dbHelper):
-            sql_main = """
-                SELECT DAILY_STOCK_STATS.*, STOCK.sector, STOCK.industry, SUBSTR(STOCK.name, 1, 100) AS short_name 
-                FROM DAILY_STOCK_STATS 
-                JOIN STOCK ON DAILY_STOCK_STATS.symbol = STOCK.symbol
-                WHERE dt = (SELECT MAX(dt) FROM DAILY_STOCK_STATS)
-            """
+    def populate_daily_stock_stats(self, dbHelper, config):
+            sql_main = config['STATISTICS_PROCESSOR']['AVIEN_STATS_SQL']
             df_main = dbHelper.readDataFrame(sql_main)
 
             # 4. DROP columns that do NOT exist in the PostgreSQL target schema
