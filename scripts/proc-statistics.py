@@ -15,8 +15,8 @@ if __name__ == "__main__":
 
     # processing
     processor = StatisticsProcessor(dbHelper=dbHelper, avienUri=avienUri, indexes=indexes)
-    processor.loadIndexDataByYahooFinance()
-    processor.populateSectorStatistics(config)
-    processor.populateMarketStatistics(config)
+    # processor.loadIndexDataByYahooFinance()
+    # processor.populateSectorStatistics(config)
+    # processor.populateMarketStatistics(config)
     processor.populateIndustryStatistics(config)
-    processor.populateAvien(config)
+    # processor.populateAvien(config)

@@ -39,5 +39,5 @@ class BaseDbHelper(ABC):
         pass
 
     @abstractmethod
-    def storeIndustryStatistics(self, df):
+    def storeIndustryStatistics(self, df01, df02):
         pass    

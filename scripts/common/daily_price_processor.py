@@ -216,7 +216,7 @@ class DailyPriceProcessor():
         # Lookback changes (5d, 10d, 20d, 50d, 100d)
         c = float(stats_dict.get("close") or 0.0)
 
-        for days in [5, 10, 20, 50, 100]:
+        for days in [5, 10, 20, 50, 63, 100, 150, 200]:
             if n >= days:
                 past_row = price_history[days - 1]
                 past_close = float(past_row.get("close") or 0.0)

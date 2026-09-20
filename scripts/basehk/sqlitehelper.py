@@ -262,9 +262,13 @@ class SqliteDbHelper(BaseDbHelper):
                         prev_open, prev_high, prev_low, prev_close, prev_volume, 
                         roc020, roc125, rsi014, sma200, sma150, sma100, sma050, sma020, sma010, sma005, sma003, 
                         ema050, ema200, ema200pref, sma200pref, ema500pref, sma50pref, rsi14sctr, ppo01sctr, roc125sctr, sctr, 
-                        histDay, chg_pct_1d, chg_pct_5d, chg_pct_10d, chg_pct_20d, chg_pct_50d, chg_pct_100d, sma10turnover, 
-                        sma20turnover, sma50turnover, above_200d_sma ,above_150d_sma ,above_100d_sma ,above_50d_sma, 
-                        above_20d_sma ,above_10d_sma ,above_5d_sma, vp_high, vp_low, vp_bullish, vp_bearish,
+                        histDay, 
+                        chg_pct_1d, chg_pct_5d, chg_pct_10d, chg_pct_20d, chg_pct_50d, chg_pct_63d,
+                        chg_pct_100d, chg_pct_150d, chg_pct_200d,
+                        sma10turnover, sma20turnover, sma50turnover, 
+                        above_200d_sma ,above_150d_sma ,above_100d_sma ,above_50d_sma, 
+                        above_20d_sma ,above_10d_sma ,above_5d_sma, 
+                        vp_high, vp_low, vp_bullish, vp_bearish,
                         rs, normalise_rs, rs_priceOverSMA20, rs_slopeSMA20, rs_slopeSMA50, rs_slopeSMA150,
                         priceOverSMA20, slopeSMA20, slopeSMA50, slopeSMA150, adr20, adr05, slopeAdr20, slopeAdr05,
                         normalise_rs1,normalise_rs2,normalise_rs3,normalise_rs4,normalise_rs5,
@@ -279,7 +283,7 @@ class SqliteDbHelper(BaseDbHelper):
                         VALUES 
                         (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
                         ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                        ?, ?, ?, ?, ?, ?, 
+                        ?, ?, ?, ?, ?, ?, ?, ?, ?,
                         ?, ?, ?, ?,
                         ?, ?, ?, ?,
                         ?,?,?,?,?,
@@ -332,7 +336,10 @@ class SqliteDbHelper(BaseDbHelper):
                         row["chg_pct_10d"],
                         row["chg_pct_20d"],
                         row["chg_pct_50d"],
+                        row["chg_pct_63d"],                        
                         row["chg_pct_100d"],
+                        row["chg_pct_150d"],
+                        row["chg_pct_200d"],
                         row["sma10turnover"],
                         row["sma20turnover"],  
                         row["sma50turnover"],
@@ -455,56 +462,95 @@ class SqliteDbHelper(BaseDbHelper):
             logging.error(f"❌ ⚪ 未知錯誤: {e}")
             sys.exit(1)         
 
-    def storeIndustryStatistics(self, df_pivoted):
-        # 3. Get sorted unique dates descending (latest date first)
-        unique_dates = sorted(df_pivoted.columns, reverse=True)
-        df_pivoted = df_pivoted[unique_dates]
+    def storeIndustryStatistics(self, up_df_pivoted, dn_df_pivoted):
+        # 1. Ensure both DataFrames share the same index name
+        up_df_pivoted.index.name = "industry"
+        dn_df_pivoted.index.name = "industry"
 
-        # 4. Map actual date column names to day_1, day_2, ..., day_N
-        column_mapping = {
-            date_str: f"day_{i+1}" for i, date_str in enumerate(unique_dates)
-        }
-        df_pivoted.rename(columns=column_mapping, inplace=True)
+        # 2. Get sorted unique dates descending (latest date first)
+        unique_dates = sorted(up_df_pivoted.columns, reverse=True)
 
-        # 5. Fill missing day columns up to day_90 if database has < 90 historical days
-        for i in range(1, 91):
-            col_name = f"day_{i}"
-            if col_name not in df_pivoted.columns:
-                df_pivoted[col_name] = 0
+        # 3. Align both DataFrames to the same sorted columns & fill NaNs with 0
+        up_aligned = up_df_pivoted.reindex(columns=unique_dates).fillna(0).astype(int)
+        dn_aligned = dn_df_pivoted.reindex(columns=unique_dates).fillna(0).astype(int)
 
-        # Reorder columns explicitly from day_1 to day_90
-        day_cols = [f"day_{i}" for i in range(1, 91)]
-        df_pivoted = df_pivoted[day_cols]
+        # 4. Construct the output DataFrame with explicit numeric up/down columns
+        combined_df = pd.DataFrame(index=up_aligned.index)
 
-        # 6. Calculate total 90-day cumulative sum for each industry
-        df_pivoted["total_90d_sum"] = df_pivoted[day_cols].sum(axis=1)
+        for i in range(90):
+            day_num = i + 1
+            up_col = f"up_day{day_num}"
+            dn_col = f"down_day{day_num}"
 
-        # 7. Sort rows by day_1 DESC, then total_90d_sum DESC
-        df_pivoted = df_pivoted.sort_values(
-            by=["day_1", "total_90d_sum"], ascending=[False, False]
+            if i < len(unique_dates):
+                date_str = unique_dates[i]
+                combined_df[up_col] = up_aligned[date_str]
+                combined_df[dn_col] = dn_aligned[date_str]
+            else:
+                combined_df[up_col] = 0
+                combined_df[dn_col] = 0
+
+        # 5. Calculate cumulative 90-day totals
+        combined_df["total_up_90d"] = up_aligned.sum(axis=1)
+        combined_df["total_down_90d"] = dn_aligned.sum(axis=1)
+
+        # 6. Sort rows by up_day1 DESC, then total_up_90d DESC
+        combined_df = combined_df.sort_values(
+            by=["up_day1", "total_up_90d"], ascending=[False, False]
         )
 
-        # Reset index so 'industry' becomes a standard column
-        df_pivoted = df_pivoted.reset_index()
+        combined_df = combined_df.reset_index()
 
-        # 8. Overwrite/replace matrix table in SQLite
-        logging.info("Writing to DAILY_INDUSTRY_90D_MATRIX...")
+        # Generate explicit column order
+        ordered_columns = ["industry"]
+        for i in range(1, 91):
+            ordered_columns.extend([f"up_day{i}", f"down_day{i}"])
+        ordered_columns.extend(["total_up_90d", "total_down_90d"])
+
+        combined_df = combined_df[ordered_columns]
+
+        # 7. Build DDL Statement in 1 Go
+        col_definitions = ['"industry" TEXT PRIMARY KEY']
+        for i in range(1, 91):
+            col_definitions.append(f'"up_day{i}" INTEGER NOT NULL DEFAULT 0')
+            col_definitions.append(f'"down_day{i}" INTEGER NOT NULL DEFAULT 0')
+        col_definitions.append('"total_up_90d" INTEGER NOT NULL DEFAULT 0')
+        col_definitions.append('"total_down_90d" INTEGER NOT NULL DEFAULT 0')
+
+        create_table_ddl = f"""
+        CREATE TABLE IF NOT EXISTS "DAILY_INDUSTRY_90D_MATRIX" (
+            {', '.join(col_definitions)}
+        );
+        """
+
+        # 8. Execute Schema Creation + Truncate & Insert in 1 Transaction
+        logging.info("Writing UP/DOWN matrix to DAILY_INDUSTRY_90D_MATRIX...")
         try:
             with sqlite3.connect(self.db_path, timeout=10) as conn:
-                df_pivoted.to_sql(
+                cursor = conn.cursor()
+                
+                # Create table with DEFAULTS in 1 go if it doesn't exist
+                cursor.execute(create_table_ddl)
+                
+                # Clear old snapshot data
+                cursor.execute('DELETE FROM "DAILY_INDUSTRY_90D_MATRIX";')
+                
+                # Append new 90-day snapshot preserving the explicit schema
+                combined_df.to_sql(
                     name="DAILY_INDUSTRY_90D_MATRIX",
                     con=conn,
-                    if_exists="replace",  # Replace matrix with latest 90-day sliding window snapshot
+                    if_exists="append",
                     index=False,
                     chunksize=1000,
-                )                
-                return df_pivoted           
+                )
+                return combined_df
+                
         except sqlite3.Error as e:
             logging.error(f"❌ ⚫ 其他 SQLite 錯誤: {e}")
             sys.exit(1)
         except Exception as e:
             logging.error(f"❌ ⚪ 未知錯誤: {e}")
-            sys.exit(1) 
+            sys.exit(1)
         
 
 
