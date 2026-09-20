@@ -37,3 +37,7 @@ class BaseDbHelper(ABC):
     @abstractmethod
     def callbackWithConn(self, callback, sql):
         pass
+
+    @abstractmethod
+    def storeIndustryStatistics(self, df):
+        pass    

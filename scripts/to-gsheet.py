@@ -41,3 +41,4 @@ if __name__ == "__main__":
     config, dbHelper, avienUri  = marketParameter.parse_argument()
     populate(config, dbHelper, 'GOOGLE-SPREADSHEET-01')
     populate(config, dbHelper, 'GOOGLE-SPREADSHEET-02')
+    populate(config, dbHelper, 'GOOGLE-SPREADSHEET-03')    

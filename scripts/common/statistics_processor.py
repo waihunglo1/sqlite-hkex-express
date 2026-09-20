@@ -212,4 +212,22 @@ class StatisticsProcessor():
             ]
             df_main.drop(columns=cols_to_drop, inplace=True)
 
-            return df_main        
+            return df_main     
+
+    def populateIndustryStatistics(self, config):
+        sql_query = config['STATISTICS_PROCESSOR']['INDUSTRY_STATS_SQL']
+        df_raw = self.dbHelper.readDataFrame(sql_query)
+
+        if df_raw.empty:
+            logging.info("⚠️ No data returned. Table skipped.")
+            return
+
+        # 3. Pivot DataFrame: stock.industry vertically (index), dt horizontally (columns)
+        df_pivoted = df_raw.pivot_table(
+            index="industry", columns="dt", values="up4pct1d", aggfunc="sum"
+        ).fillna(0)
+
+        df = self.dbHelper.storeIndustryStatistics(df_pivoted)
+
+        logging.info("Industry Statistics:")
+        logging.info("\n" + df.iloc[:5, :10].to_string())
