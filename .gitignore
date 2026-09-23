@@ -363,3 +363,4 @@ scripts/**/*.pyc
 .service_account.json
 .client_secrets.json
 *.wal
+.token.json

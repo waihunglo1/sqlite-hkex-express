@@ -16,7 +16,7 @@ from pathlib import Path
 
 def tickersFromXls(hkexConfig):
     downloadPath = hkexConfig['DOWNLOAD_PATH']
-    fileName = hkexConfig['listOfSecurities']
+    fileName = hkexConfig['LIST_OF_SECURITIES']
     current_dir = Path.cwd()
     targetPath = os.path.join(str(current_dir), downloadPath)
     save_path = os.path.join(targetPath, fileName)
