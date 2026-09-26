@@ -43,7 +43,7 @@ def yahooQueryStockInfo(tickerMap):
         updated += doYahooQuery(tickerBatch, errorRecords, tickerMap)
         elapsed_time = time.perf_counter() - start_time
         sleep = random.uniform(1, 10)
-        logging.info(f"Updated / Error : {updated} / {len(errorRecords)}. elapse : {elapsed_time:.2f} sleep : {sleep:.2f}")
+        logging.info(f"Updated:{updated} Error:{len(errorRecords)}. elapse : {elapsed_time:.2f} / sleep : {sleep:.2f}")
         time.sleep(sleep)
 
     return errorRecords    
