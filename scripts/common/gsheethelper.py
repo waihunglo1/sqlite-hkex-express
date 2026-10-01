@@ -25,7 +25,7 @@ def cleanPayload(full_payload):
     # --------------------------------------------------------    
     return cleaned_payload
 
-def publish_gsheet(df, file, tabName):
+def publish_gsheet(df, targetSpreadSheetId, tabName):
     headers = df.columns.tolist()
     data_rows = df.values.tolist()
     data_to_upload = data_rows
@@ -41,7 +41,10 @@ def publish_gsheet(df, file, tabName):
     logging.info("正在連接 Google Sheets...")
     try:
         gc = gspread.service_account(filename='.service_account.json')
-        sh = gc.open(file)
+        sh = gc.open_by_key(targetSpreadSheetId)
+        
+        # 3. Get the Spreadsheet File Name
+        file_name = sh.title
 
         # 開啟指定工作表，若未指定則開啟第一個
         worksheet = (
@@ -68,10 +71,10 @@ def publish_gsheet(df, file, tabName):
             value_input_option='USER_ENTERED'
         )
 
-        logging.info(f"🎉 資料已成功同步至 Google Sheets！ {file} / {tabName}")
+        logging.info(f"🎉 資料已成功同步至 Google Sheets！ {file_name} / {tabName}")
 
     except Exception as e:
-        logging.error(f"發生錯誤：{e}  {file} / {tabName}")
+        logging.error(f"發生錯誤：{e}  {file_name} / {tabName}")
 
 def fetch_and_populate(conn, sql):
     try:

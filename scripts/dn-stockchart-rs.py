@@ -33,18 +33,11 @@ def store(dbHelper, table_name:str, response):
         logging.error(response) 
         return
 
-    # 1. Extract raw date from the VERY FIRST item
-    first_item = items[0]
-    raw_date = (
-        first_item.get("dt")
-        or first_item.get("date")
-        or first_item.get("tradeDate")
-        or first_item.get("asOfDate")
-    )
-
     # Convert date to standard YYYYMMDD string format
-    formatted_date = pd.to_datetime(raw_date).strftime("%Y%m%d")
-    logging.info(f"📅 Extracted Trade Date: {formatted_date} (raw: {raw_date})")
+    # formatted_date = pd.to_datetime(raw_date).strftime("%Y%m%d")
+    last_trading_date = helper.retrieveLastTradingDate()
+    formatted_date = pd.to_datetime(last_trading_date).strftime("%Y%m%d")
+    logging.info(f"📅 Extracted Trade Date: {formatted_date} (raw: {last_trading_date})")
 
     # Build DataFrame from raw items
     df = pd.DataFrame(items)
@@ -89,7 +82,6 @@ def store(dbHelper, table_name:str, response):
     dbHelper.insertOrReplaceSctrTable(records, table_name, insert_cols)
 
     logging.info(f"✅ Successfully upserted {len(df_clean)} records into '{table_name}'.")
-
 
 if __name__ == "__main__":
     config, dbHelper, avienUri =  marketParameter.parse_argument()

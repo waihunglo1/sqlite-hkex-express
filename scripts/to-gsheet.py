@@ -20,8 +20,8 @@ from common import market_parameter as marketParameter
     reraise=True,
 )
 
-def _publish_with_retry(df, file, tabName):
-    gsheetHelper.publish_gsheet(df, file, tabName)
+def _publish_with_retry(df, targetSpreadSheetId, tabName):
+    gsheetHelper.publish_gsheet(df, targetSpreadSheetId, tabName)
 
 def fetch_and_populate(conn, sql):        
     df = gsheetHelper.fetch_and_populate(conn, sql)
@@ -34,8 +34,9 @@ def populate(config, dbHelper, id):
 
     # publish to google-sheet
     targetFile = config[id]['FILE']
+    targetSpreadSheetId = config[id]['SPREAD_SHEET_ID']
     tabName = config[id]['TAB_NAME']
-    _publish_with_retry(df, targetFile, tabName) 
+    _publish_with_retry(df, targetSpreadSheetId, tabName) 
 
 if __name__ == "__main__":
     config, dbHelper, avienUri  = marketParameter.parse_argument()

@@ -243,3 +243,28 @@ class StatisticsProcessor():
 
         logging.info("Industry Statistics:")
         logging.info("\n" + df.iloc[:5, :10].to_string())
+
+    def populateStockChartsETFRelativeStrength(self, config):
+        sql_query = config['STATISTICS_PROCESSOR']['ETF_DAILY_RS_SQL']
+        df_raw = self.dbHelper.readDataFrame(sql_query)
+
+        if df_raw.empty:
+            logging.info("⚠️ No data returned. Table skipped.")
+            return
+
+        # 3. Pivot DataFrame: stock.industry vertically (index), dt horizontally (columns)
+        df_pivoted = (
+            df_raw.pivot_table(index="symbol", columns="dt", values="sctr")
+            .fillna(0)
+            .sort_index(axis=1, ascending=False)
+        )
+
+        # 2. Get the most recent trading date (first column name)
+        latest_dt = df_pivoted.columns[0]
+
+        # 3. Sort rows by the latest SCTR score descending
+        df_pivoted = df_pivoted.sort_values(by=latest_dt, ascending=False)
+
+        logging.info("Stock chart ETF RS Statistics:")
+        logging.info("\n" + df_pivoted.iloc[:5, :10].to_string())
+

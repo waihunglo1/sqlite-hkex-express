@@ -1,5 +1,6 @@
 import logging
 import pandas as pd
+import sys
 from common.statistics_processor import StatisticsProcessor 
 from common import market_parameter as marketParameter
 from common import utility as helper
@@ -15,6 +16,12 @@ if __name__ == "__main__":
 
     # processing
     processor = StatisticsProcessor(dbHelper=dbHelper, avienUri=avienUri, indexes=indexes)
+
+    if config['PARAMETER']['MARKET'] == "us":
+        processor.populateStockChartsETFRelativeStrength(config)
+
+    sys.exit(-1)
+
     processor.loadIndexDataByYahooFinance()
     processor.populateSectorStatistics(config)
     processor.populateMarketStatistics(config)

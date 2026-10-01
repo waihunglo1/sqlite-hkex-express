@@ -14,8 +14,15 @@ def parse_argument():
 
     # 2. Dynamically import config and dbHelper based on market choice
     if args.market == "us":
-        from baseus import config, duckDbHelper as dbHelper, avienUri  # or duckDbHelper
+        from baseus import config, duckDbHelper as dbHelper, avienUri 
     else:
         from basehk import config, sqliteDbHelper as dbHelper, avienUri
+
+    # Ensure the 'PARAMETER' section exists in the ConfigParser object
+    if not config.has_section("PARAMETER"):
+        config.add_section("PARAMETER")
+
+    # Safely set the option
+    config.set("PARAMETER", "MARKET", str(args.market))
 
     return config, dbHelper, avienUri

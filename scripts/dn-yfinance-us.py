@@ -14,6 +14,7 @@ import math
 import logging
 from baseus import config, duckDbHelper
 from common import translator as translaterHelper
+from common import utility as helper
 
 def usTickerFromGitAte329(tickerConfig):
     url = tickerConfig["URL"]
@@ -102,6 +103,7 @@ def yahooHistPriceBatchQuery(historyConfig):
     batch_size = int(historyConfig["BATCH_SIZE"] or 50)
     tickers_list = duckDbHelper.fetchTickers("1 = 1")
     total_tickers = len(tickers_list)
+    last_trading_date = helper.retrieveLastTradingDate()
     logging.info(f"No of Tickers to load from yahoo : {total_tickers} / batch size : {batch_size}")
 
     updatedCount = 0
@@ -109,23 +111,12 @@ def yahooHistPriceBatchQuery(historyConfig):
 
     for i in range(0, total_tickers, batch_size):
         batch = tickers_list[i : i + batch_size]
-        updatedCount += fillHistPriceByYahooQuery(batch, errorRecords, selected_period)
+        updatedCount += fillHistPriceByYahooQuery(batch, errorRecords, last_trading_date, selected_period)
         logging.info(f"正在處理第 {i//batch_size + 1} 批 / 共 {math.ceil(total_tickers/batch_size)} 批 / Update : {updatedCount} / Error : {len(errorRecords)}")
 
-def retrieveLastTradingDate():
-    # Download a short window of recent market data for a major ticker
-    ticker = yf.Ticker("^GSPC") # S&P 500 Index
-    recent_data = ticker.history(period="5d")
-
-    # Extract the date of the very last row in the DataFrame
-    last_trading_date = recent_data.index[-1].strftime('%Y-%m-%d')
-
-    logging.info(f"The last US trading date was: {last_trading_date}")
-    return last_trading_date
-
-def fillHistPriceByYahooQuery(tickerList, errorRecords, selected_period='2y'):
+def fillHistPriceByYahooQuery(tickerList, errorRecords, last_trading_date, selected_period='2y'):
     updatedCount = 0
-    last_trading_date = retrieveLastTradingDate()
+
 
     try:
         sleep = random.uniform(1, 10)

@@ -1,21 +1,22 @@
+import os
+import datetime
+import time
+import posixpath
+import logging
+import pandas as pd
+import os
+import re
+import zipfile
+import sys
+import yfinance as yf
+
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 from datetime import date, timedelta, timezone
-import os
-import datetime
-import time
-from pathlib import Path
-import posixpath
-from urllib.parse import urlsplit
-import logging
-import pandas as pd
-import os
-from pathlib import Path
-import re
-import zipfile
-import sys
 from contextlib import contextmanager
+from pathlib import Path
+from urllib.parse import urlsplit
 
 # Define the number of days for the cutoff
 days_cutoff = 6
@@ -328,6 +329,17 @@ def format_bytes(size_in_bytes: int) -> str:
         return f"{size_in_bytes / 1024:.2f} KB"
     else:
         return f"{size_in_bytes / (1024 * 1024):.2f} MB"
+
+def retrieveLastTradingDate():
+    # Download a short window of recent market data for a major ticker
+    ticker = yf.Ticker("^GSPC") # S&P 500 Index
+    recent_data = ticker.history(period="5d")
+
+    # Extract the date of the very last row in the DataFrame
+    last_trading_date = recent_data.index[-1].strftime('%Y-%m-%d')
+
+    logging.info(f"The last US trading date was: {last_trading_date}")
+    return last_trading_date
     
 if __name__ == "__main__":
-    logging.info("This is a different version of the module.py file.")    
+    logging.info("This is a different version of the module.py file.")

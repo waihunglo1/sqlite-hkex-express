@@ -28,9 +28,6 @@ def avienConnectionString():
     # Construct connection string (Aiven requires sslmode=require)
     AVIEN_URI = f"postgresql://{AVIEN_DB_USER}:{AVIEN_DB_PASSWORD}@{AVIEN_DB_HOST}:{AVIEN_DB_PORT}/{AVIEN_DB_DATABASE}?sslmode=require"
     return AVIEN_URI
-analyst_ini_path = os.getenv("ANALYST_DATA_INI")
-config = configparser.ConfigParser()
-
 
 #
 # INIT
@@ -39,6 +36,9 @@ config = configparser.ConfigParser()
 # Force UTF-8 output streams for standard terminal logging
 sys.stdout.reconfigure(encoding="utf-8")
 sys.stderr.reconfigure(encoding="utf-8")
+
+analyst_ini_path = os.getenv("ANALYST_DATA_INI")
+config = configparser.ConfigParser()
 
 # read init
 if analyst_ini_path and os.path.exists(analyst_ini_path):
