@@ -364,3 +364,4 @@ scripts/**/*.pyc
 .client_secrets.json
 *.wal
 .token.json
+.whatsapp_bot.json

@@ -227,12 +227,19 @@ class StatisticsProcessor():
             index="industry", columns="dt", values="up4pct1d", aggfunc="sum"
         ).fillna(0)
 
-        # 3. Pivot DataFrame: stock.industry vertically (index), dt horizontally (columns)
+        # 4. Pivot DataFrame: stock.industry vertically (index), dt horizontally (columns)
         dn_df_pivoted = df_raw.pivot_table(
             index="industry", columns="dt", values="dn4pct1d", aggfunc="sum"
         ).fillna(0) 
 
-        df = self.dbHelper.storeIndustryStatistics(up_df_pivoted, dn_df_pivoted)
+        # 5. Pivot DataFrame: stock.industry vertically (index), dt horizontally (columns)
+        above_50d_sma_pct_df_pivoted = df_raw.pivot_table(
+            index="industry", columns="dt", values="above_50d_sma_pct", aggfunc="sum"
+        ).fillna(0)       
+
+        logging.info("above_50d_sma_pct\n" + above_50d_sma_pct_df_pivoted.iloc[:10, :10].to_string())
+
+        df = self.dbHelper.storeIndustryStatistics(up_df_pivoted, dn_df_pivoted, above_50d_sma_pct_df_pivoted)
 
         logging.info("Industry Statistics:")
         logging.info("\n" + df.iloc[:5, :10].to_string())
