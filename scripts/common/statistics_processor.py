@@ -3,6 +3,7 @@ import pandas as pd
 import yfinance as yf
 import psycopg
 from . import basedbhelper as dbHelper
+from common import gsheethelper as gsheetHelper
 
 class StatisticsProcessor():
 
@@ -244,7 +245,7 @@ class StatisticsProcessor():
         logging.info("Industry Statistics:")
         logging.info("\n" + df.iloc[:5, :10].to_string())
 
-    def populateStockChartsETFRelativeStrength(self, config):
+    def populateStockChartsETFRelativeStrength(self, config, gspreadId):
         sql_query = config['STATISTICS_PROCESSOR']['ETF_DAILY_RS_SQL']
         df_raw = self.dbHelper.readDataFrame(sql_query)
 
@@ -254,7 +255,7 @@ class StatisticsProcessor():
 
         # 3. Pivot DataFrame: stock.industry vertically (index), dt horizontally (columns)
         df_pivoted = (
-            df_raw.pivot_table(index="symbol", columns="dt", values="sctr")
+            df_raw.pivot_table(index=["symbol", "name"], columns="dt", values="sctr")
             .fillna(0)
             .sort_index(axis=1, ascending=False)
         )
@@ -267,4 +268,12 @@ class StatisticsProcessor():
 
         logging.info("Stock chart ETF RS Statistics:")
         logging.info("\n" + df_pivoted.iloc[:5, :10].to_string())
+
+        gsheetHelper.populate_df(df_pivoted, config, gspreadId)
+
+
+
+
+
+
 

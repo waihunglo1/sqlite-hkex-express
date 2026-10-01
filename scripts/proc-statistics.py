@@ -18,9 +18,7 @@ if __name__ == "__main__":
     processor = StatisticsProcessor(dbHelper=dbHelper, avienUri=avienUri, indexes=indexes)
 
     if config['PARAMETER']['MARKET'] == "us":
-        processor.populateStockChartsETFRelativeStrength(config)
-
-    sys.exit(-1)
+        processor.populateStockChartsETFRelativeStrength(config, "GOOGLE-SPREADSHEET-04")
 
     processor.loadIndexDataByYahooFinance()
     processor.populateSectorStatistics(config)

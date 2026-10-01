@@ -365,3 +365,5 @@ scripts/**/*.pyc
 *.wal
 .token.json
 .whatsapp_bot.json
+
+data/.tmp.driveupload/*
