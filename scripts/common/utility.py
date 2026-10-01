@@ -319,6 +319,15 @@ def safe_float(val, default=0.0):
     if val is None or pd.isna(val):
         return default
     return float(val)
+
+def format_bytes(size_in_bytes: int) -> str:
+    """Formats bytes into human-readable B, KB, or MB."""
+    if size_in_bytes < 1024:
+        return f"{size_in_bytes} B"
+    elif size_in_bytes < 1024 * 1024:
+        return f"{size_in_bytes / 1024:.2f} KB"
+    else:
+        return f"{size_in_bytes / (1024 * 1024):.2f} MB"
     
 if __name__ == "__main__":
     logging.info("This is a different version of the module.py file.")    

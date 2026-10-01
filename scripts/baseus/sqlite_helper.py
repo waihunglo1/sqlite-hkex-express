@@ -335,27 +335,61 @@ class SqliteDbHelper(BaseDbHelper):
             logging.error(f"❌ ⚪ 未知錯誤: {e}")
             sys.exit(1)
 
-    def callbackWithConn(self, callback, sql):
-        try:
-            with sqlite3.connect(self.db_path, timeout=10) as conn:
-                df = callback(conn, sql)
-                return df           
-        except sqlite3.Error as e:
-            logging.error(f"❌ ⚫ 其他 SQLite 錯誤: {e}")
-            sys.exit(1)
-        except Exception as e:
-            logging.error(f"❌ ⚪ 未知錯誤: {e}")
-            sys.exit(1)
+    def init_sctr_table(self, table_name: str):
+        """Creates the SCTR database table with explicit column schema."""
+        ddl_statement = f"""
+        CREATE TABLE IF NOT EXISTS {table_name} (
+            dt TEXT NOT NULL,
+            symbol TEXT NOT NULL,
+            name TEXT,
+            sctr REAL,
+            delta REAL,
+            marketcap REAL,
+            vol REAL,
+            close REAL,
+            industry TEXT,
+            sector TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (dt, symbol)
+        );
+        """
 
-    def readDataFrame(self, sql_main):
         try:
-            with sqlite3.connect(self.db_path, timeout=10) as conn:
-                df_main = pd.read_sql_query(sql_main, conn)
-                return df_main           
+            with sqlite3.connect(self.db_path, timeout=10) as conn:        
+                conn.execute(ddl_statement)
+                conn.execute(
+                    f"CREATE INDEX IF NOT EXISTS idx_sctr_dt ON {table_name} (dt DESC);"
+                )
+                conn.commit()
         except sqlite3.Error as e:
             logging.error(f"❌ ⚫ 其他 SQLite 錯誤: {e}")
             sys.exit(1)
         except Exception as e:
             logging.error(f"❌ ⚪ 未知錯誤: {e}")
+            sys.exit(1)                
+
+    def insertOrReplaceSctrTable(self, records, table_name, insert_cols):
+        # Prepare SQLite Connection and initialize table
+        self.init_sctr_table(table_name)
+
+        col_names = ", ".join(insert_cols)
+        placeholders = ", ".join([f":{col}" for col in insert_cols])
+
+        insert_sql = f"""
+            INSERT OR REPLACE INTO {table_name} ({col_names})
+            VALUES ({placeholders})
+        """
+
+        try:
+            with sqlite3.connect(self.db_path, timeout=10) as conn:        
+                cursor = conn.cursor()
+                cursor.executemany(insert_sql, records)
+                conn.commit()
+        except sqlite3.Error as e:
+            logging.error(f"❌ ⚫ 其他 SQLite 錯誤: {e}")
             sys.exit(1)
+        except Exception as e:
+            logging.error(f"❌ ⚪ 未知錯誤: {e}")
+            sys.exit(1)   
+
 

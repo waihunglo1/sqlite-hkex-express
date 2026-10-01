@@ -437,31 +437,6 @@ class SqliteDbHelper(BaseDbHelper):
         except Exception as e:
             logging.error(f"❌ ⚪ 未知錯誤: {e}")
             sys.exit()
-
-    def callbackWithConn(self, callback, sql):
-        try:
-            with sqlite3.connect(self.db_path, timeout=10) as conn:
-                df = callback(conn, sql)
-                return df           
-        except sqlite3.Error as e:
-            logging.error(f"❌ ⚫ 其他 SQLite 錯誤: {e}")
-            sys.exit(1)
-        except Exception as e:
-            logging.error(f"❌ ⚪ 未知錯誤: {e}")
-            sys.exit(1) 
-
-    def readDataFrame(self, sql_main):
-        try:
-            with sqlite3.connect(self.db_path, timeout=10) as conn:
-                df_main = pd.read_sql_query(sql_main, conn)
-                return df_main           
-        except sqlite3.Error as e:
-            logging.error(f"❌ ⚫ 其他 SQLite 錯誤: {e}")
-            sys.exit(1)
-        except Exception as e:
-            logging.error(f"❌ ⚪ 未知錯誤: {e}")
-            sys.exit(1)         
-
         
 
 

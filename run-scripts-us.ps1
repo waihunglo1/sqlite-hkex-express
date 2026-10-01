@@ -24,4 +24,7 @@ cmd /c "py scripts/proc-statistics.py --market us 2>&1" | Tee-Object -FilePath $
 Write-Host "Running Python script 04" -ForegroundColor Yellow
 cmd /c "py scripts/to-gsheet.py --market us 2>&1" | Tee-Object -FilePath $LogFile -Append
 
+Write-Host "Running Python script 05" -ForegroundColor Yellow
+cmd /c "py scripts/dn-stockchart-rs.py --market us 2>&1" | Tee-Object -FilePath $LogFile -Append
+
 Write-Host "=== All scripts finished. Log saved to $LogFile ===" -ForegroundColor Green
