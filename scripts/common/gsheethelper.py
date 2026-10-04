@@ -117,25 +117,22 @@ def splitStringToArray(input):
         logging.error("設定檔錯誤：'run_mode' 為空或格式不正確。")
         return None   
 
-def populate_df(df, config, id:str):
-    targetSpreadSheetId = config[id]['SPREAD_SHEET_ID']
-    tabName = config[id]['TAB_NAME']
-
+def populate_df(df, spreadSheetId:str, workSheetId:str):
     # 2. 連接 Google Sheets 並寫入資料
     logging.info("正在連接 Google Sheets...")
     try:
         # google spreadsheet
         gc = gspread.service_account(filename='.service_account.json')
-        sh = gc.open_by_key(targetSpreadSheetId)
+        sh = gc.open_by_key(spreadSheetId)
 
         # 3. Get the Spreadsheet File Name
         file_name = sh.title
 
         try:
-            worksheet = sh.worksheet(tabName)
+            worksheet = sh.worksheet(workSheetId)
         except gspread.WorksheetNotFound:
             # Create worksheet if it does not already exist
-            worksheet = sh.add_worksheet(title=tabName, rows="1000", cols="30")        
+            worksheet = sh.add_worksheet(title=workSheetId, rows="1000", cols="30")        
 
         # Write entire DataFrame into Google Sheet starting at cell A1
         set_with_dataframe(
@@ -147,6 +144,6 @@ def populate_df(df, config, id:str):
             include_column_header = True,
         )               
     except Exception as e:
-        logging.error(f"發生錯誤：{e}  {file_name} / {tabName}")
+        logging.error(f"發生錯誤：{e}  {file_name} / {workSheetId}")
 
-    logging.info(f"🎉 資料已成功同步至 Google Sheets！ {file_name} / {tabName}")
+    logging.info(f"🎉 資料已成功同步至 Google Sheets！ {file_name} / {workSheetId}")
