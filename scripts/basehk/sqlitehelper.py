@@ -23,69 +23,17 @@ class SqliteDbHelper(BaseDbHelper):
                 :symbol, :period, :dt, :tm, :open, :high, :low, :close, :volume, :adj_close, :open_int
             )
         """
-
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
-            cursor.executemany(sql, prices)
-            return cursor.rowcount  # Returns the total affected rows
-
-    def insertOrReplaceStockInfo(self, records) -> int:
-        df = pd.DataFrame(records)
-        # logging.info("\n" + df.to_markdown(index=False).rstrip)
-
-        updated = 0
         try:
-            with sqlite3.connect(self.db_path, timeout=10) as conn:
+            with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
-            
-                # Use SQLite "INSERT OR REPLACE" logic row-by-row
-                for _, row in df.iterrows():
-                    cursor.execute('''
-                        REPLACE INTO STOCK (symbol,name,industry,sector,market_cap,industry_en,sector_en,quote_type) 
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                    ''', (
-                        row['symbol'], row['name'], row['industry'], 
-                        row['sector'], row['marketCap'],
-                        row['industry_en'], row['sector_en'],
-                        row['quoteType']
-                        )
-
-                    )
-                    # 📜 獲取受影響的行數
-                    updated += cursor.rowcount
-                
-                conn.commit()
+                cursor.executemany(sql, prices)
+                return cursor.rowcount  # Returns the total affected rows
         except sqlite3.Error as e:
             logging.error(f"❌ ⚫ 其他 SQLite 錯誤: {e}")
-            exit
+            sys.exit(-1)
         except Exception as e:
             logging.error(f"❌ ⚪ 未知錯誤: {e}")
-            exit
-
-        return updated   
-
-    def fetchAllRows(self, sql: str, params: tuple | list | dict = ()):
-        cleaned = sql.replace("\r", " ").replace("\n", " ")
-        try:
-            # Start high-precision timer
-            # start_time = time.perf_counter()
-
-            with sqlite3.connect(self.db_path, timeout=10) as conn:
-                conn.row_factory = sqlite3.Row
-                # logging.info(f"Start running sql: {cleaned[:30]}..{cleaned[-20:]}")
-                cursor = conn.execute(cleaned, params)
-                rows = cursor.fetchall()  
-
-                # Calculate elapsed time in milliseconds
-                # elapsed_ms = (time.perf_counter() - start_time) * 1000
-
-                # logging.info(
-                #    f"⏱️ [{elapsed_ms:.2f} ms] ({len(rows)} rows) | SQL: {cleaned[:30]}..{cleaned[-20:]}"
-                # )
-                return rows         
-        except sqlite3.Error as e:
-            logging.error(f"❌ ⚫ 其他 SQLite 錯誤: {e}")
-            sys.exit(1)
+            sys.exit(-1)
 
     def insertOrReplaceSectorRecords(self, records) -> int:
         df = pd.DataFrame(records)
@@ -177,29 +125,7 @@ class SqliteDbHelper(BaseDbHelper):
             logging.error(f"❌ ⚪ 未知錯誤: {e}")
             sys.exit(1)
 
-        return updated
-
-    def insertOrReplaceMarketRecords(self, records) -> int:
-        insert_sql = """
-        REPLACE INTO DAILY_MARKET_STATS 
-        (dt, up4pct1d, dn4pct1d, up25pctin100d, dn25pctin100d, up25pctin20d, dn25pctin20d, 
-        up50pctin20d, dn50pctin20d, noofstocks, above200smapct, above150smapct, above50smapct, above20smapct, hsi, hsce) 
-        VALUES (?,?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """        
-        updated = 0
-        try:
-            with sqlite3.connect(self.db_path, timeout=10) as conn:
-                cursor = conn.cursor()
-                cursor.executemany(insert_sql, records)
-                return cursor.rowcount  # Returns the total affected rows                
-        except sqlite3.Error as e:
-            logging.error(f"❌ ⚫ 其他 SQLite 錯誤: {e}")
-            sys.exit(1)
-        except Exception as e:
-            logging.error(f"❌ ⚪ 未知錯誤: {e}")
-            sys.exit(1)
-
-        return updated                       
+        return updated             
 
     def insertOrReplacePriceRecords(self, records) -> int:
         df = pd.DataFrame(records)
@@ -388,55 +314,7 @@ class SqliteDbHelper(BaseDbHelper):
             sys.exit(1)
 
         return updated 
-    
-    def _insertOrReplaceStockInfo(self, records):
-        df = pd.DataFrame(records)
-        df["symbol"] = df["symbol"].str.replace("/", "-", regex=False)
-        updated = 0
-        try:
-            with sqlite3.connect(self.db_path, timeout=10) as conn:
-                cursor = conn.cursor()
-            
-                # Use SQLite "INSERT OR REPLACE" logic row-by-row
-                for _, row in df.iterrows():
-                    cursor.execute('''
-                        INSERT INTO STOCK (symbol, name, sector, market_cap) 
-                        VALUES (?, ?, ?, ?)
-                        ON CONFLICT(symbol) DO UPDATE SET
-                            name = EXCLUDED.name,
-                            sector = EXCLUDED.sector,
-                            market_cap = EXCLUDED.market_cap
-                    ''', (row['symbol'], row['name'], row['industry'], row['marketCap']))
-                    updated += cursor.rowcount
-                
-                conn.commit()
-        except sqlite3.Error as e:
-            logging.error(f"❌ ⚫ 其他 SQLite 錯誤: {e}")
-            sys.exit()
-        except Exception as e:
-            logging.error(f"❌ ⚪ 未知錯誤: {e}")
-            sys.exit()
 
-        return updated
-
-    def fetchTickers(self, whereClause):
-        try:
-            with sqlite3.connect(self.db_path, timeout=10) as conn:
-                cursor = conn.cursor()
-                cursor.execute("SELECT symbol FROM stock WHERE " + whereClause + " order by symbol")
-
-                # 4. Retrieve and print the results
-                symbols = [row[0] for row in cursor.fetchall()]
-
-                if not symbols:
-                    logging.info("沒有需要更新的股票。")
-                return symbols
-        except sqlite3.Error as e:
-            logging.error(f"❌ ⚫ 其他 SQLite 錯誤: {e}")
-            sys.exit()
-        except Exception as e:
-            logging.error(f"❌ ⚪ 未知錯誤: {e}")
-            sys.exit()
         
 
 

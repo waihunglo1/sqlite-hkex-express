@@ -10,7 +10,7 @@ class SqliteDbHelper(BaseDbHelper):
     def __init__(self, db_path: str):
         self.db_path = db_path
 
-    def insertOrReplaceStockInfo(self, df):
+    def insertOrReplaceStockInfoTickerMap(self, df):
         df["symbol"] = df["symbol"].str.replace("/", "-", regex=False)
 
         # Clean/map DataFrame columns to match table schema
@@ -40,24 +40,6 @@ class SqliteDbHelper(BaseDbHelper):
         except Exception as e:
             logging.error(f"❌ ⚪ 未知錯誤: {e}")
             sys.exit(1)
-
-    def fetchTickers(self, whereClause):
-        try:
-            with sqlite3.connect(self.db_path, timeout=10) as conn:
-                cursor = conn.cursor()
-                cursor.execute("SELECT symbol FROM stock WHERE " + whereClause + " ORDER BY symbol")
-
-                symbols = [row[0] for row in cursor.fetchall()]
-
-                if not symbols:
-                    logging.info("沒有需要更新的股票。")
-                return symbols
-        except sqlite3.Error as e:
-            logging.error(f"❌ ⚫ 其他 SQLite 錯誤: {e}")
-            sys.exit(1)
-        except Exception as e:
-            logging.error(f"❌ ⚪ 未知錯誤: {e}")
-            sys.exit(1)    
 
     def insertDailyStockPrice(self, prices: list) -> int:
         if not prices:
@@ -99,83 +81,6 @@ class SqliteDbHelper(BaseDbHelper):
         except sqlite3.Error as e:
             logging.error(f"❌ ⚫ 其他 SQLite 錯誤: {e}")
             sys.exit(1)
-
-    def insertOrReplaceHistPrice(self, hist) -> int: 
-        hist.rename(columns={'symbol': 'ticker'}, inplace=True)
-        hist['date'] = (
-            pd.to_datetime(hist['date'], utc=True)
-            .dt.strftime('%Y%m%d')
-        )
-        required_columns = ['ticker', 'date', 'open', 'high', 'low', 'close', 'adjclose', 'volume']
-        for col in required_columns:
-            if col not in hist.columns:
-                hist[col] = None
-                
-        hist_final = hist[required_columns]
-
-        static_sql = """
-            INSERT OR REPLACE INTO daily_stock_price 
-            (symbol, period, dt, open, high, low, close, adj_close, volume, open_int) 
-            VALUES (?, 'D', ?, ?, ?, ?, ?, ?, ?, 0)
-        """
-        try:
-            with sqlite3.connect(self.db_path, timeout=10) as conn:
-                cursor = conn.cursor()
-                data_tuples = list(hist_final.itertuples(index=False, name=None))
-                cursor.executemany(static_sql, data_tuples)
-                conn.commit()
-                logging.info(f"✅ 成功將 {len(hist_final)} 筆歷史數據以 100% 靜態安全語法更新至資料庫。")
-
-                return len(data_tuples)
-        except Exception as e:
-            logging.error(f"❌ 寫入資料庫時出錯: {e}")
-
-        return 0 
-    
-    def insertOrReplaceStockInfo2(self, records) -> int:
-        df = pd.DataFrame(records)
-        if df.empty:
-            return 0
-
-        sql = """
-            INSERT OR REPLACE INTO STOCK (symbol, name, industry, sector, market_cap, industry_en, sector_en, quote_type) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        """
-
-        try:
-            with sqlite3.connect(self.db_path, timeout=10) as conn:
-                cursor = conn.cursor()
-                data_tuples = [
-                    (
-                        row['symbol'], row['name'], row['industry'], 
-                        row['sector'], row['marketCap'],
-                        row['industry_en'], row['sector_en'],
-                        row['quoteType']
-                    )
-                    for _, row in df.iterrows()
-                ]
-                cursor.executemany(sql, data_tuples)
-                conn.commit()
-                return len(df)
-        except sqlite3.Error as e:
-            logging.error(f"❌ ⚫ 其他 SQLite 錯誤: {e}")
-            sys.exit(1)
-        except Exception as e:
-            logging.error(f"❌ ⚪ 未知錯誤: {e}")
-            sys.exit(1)
-
-    def fetchAllRows(self, sql: str, params: tuple | list | dict = ()):
-        cleaned = sql.replace("\r", " ").replace("\n", " ")
-        try:
-            with sqlite3.connect(self.db_path, timeout=10) as conn:
-                conn.row_factory = sqlite3.Row
-                cursor = conn.execute(cleaned, params)
-                rows = cursor.fetchall()
-                # Convert sqlite3.Row objects to standard Python dictionaries
-                return [dict(row) for row in rows]
-        except sqlite3.Error as e:
-            logging.error(f"❌ ⚫ 其他 SQLite 錯誤: {e}")
-            sys.exit(1)  
 
     def insertOrReplacePriceStats(self, records) -> int:
         df = pd.DataFrame(records)
@@ -300,40 +205,7 @@ class SqliteDbHelper(BaseDbHelper):
             logging.error(f"❌ ⚪ 未知錯誤: {e}")
             sys.exit(1)
 
-    def insertOrReplaceMarketRecords(self, records) -> int:
-        if not records:
-            return 0
-            
-        if isinstance(records, list) and isinstance(records[0], dict):
-            df = pd.DataFrame(records)
-            columns_order = [
-                "dt", "up4pct1d", "dn4pct1d", "up25pctin100d", "dn25pctin100d", 
-                "up25pctin20d", "dn25pctin20d", "up50pctin20d", "dn50pctin20d", 
-                "noofstocks", "above200smapct", "above150smapct", "above50smapct", 
-                "above20smapct", "hsi", "hsce"
-            ]
-            data_to_insert = list(df[columns_order].itertuples(index=False, name=None))
-        else:
-            data_to_insert = records
 
-        sql = """
-            INSERT OR REPLACE INTO DAILY_MARKET_STATS 
-            (dt, up4pct1d, dn4pct1d, up25pctin100d, dn25pctin100d, up25pctin20d, dn25pctin20d, 
-            up50pctin20d, dn50pctin20d, noofstocks, above200smapct, above150smapct, above50smapct, above20smapct, hsi, hsce) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """        
-        try:
-            with sqlite3.connect(self.db_path, timeout=10) as conn:
-                cursor = conn.cursor()
-                cursor.executemany(sql, data_to_insert)
-                conn.commit()
-                return len(data_to_insert)
-        except sqlite3.Error as e:
-            logging.error(f"❌ ⚫ 其他 SQLite 錯誤: {e}")
-            sys.exit(1)
-        except Exception as e:
-            logging.error(f"❌ ⚪ 未知錯誤: {e}")
-            sys.exit(1)
 
     def init_sctr_table(self, table_name: str):
         """Creates the SCTR database table with explicit column schema."""
