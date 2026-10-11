@@ -18,25 +18,18 @@ if __name__ == "__main__":
     logging.info(f"Trading date : {latestTradingDate}")
 
     # fill price
-    # priceFiller = YahooQueryPriceFiller(dbHelper=dbHelper)
-    # priceFiller.fillPriceByConfig(config['YAHOO-FINANCE'])
+    priceFiller = YahooQueryPriceFiller(dbHelper=dbHelper)
+    priceFiller.fillPriceByConfig(config['YAHOO-FINANCE'])
 
     # process price
     # where clause
     where_clause_str = helper.sqlClean(config['DAILY_PRICE_PROCESSOR']['WHERE_CLAUSE'])
 
     # Pass helper to your processor
-    #processor = DailyPriceProcessor(dbHelper=dbHelper, whereClause=where_clause_str)
-    #processor.process_data_local(latestTradingDate, "")    
+    dpProcessor = DailyPriceProcessor(dbHelper=dbHelper, whereClause=where_clause_str)
+    dpProcessor.process_data_local(latestTradingDate, "")    
 
     # generate statistics
-    #processor = StatisticsProcessor(dbHelper=dbHelper, avienUri=avienUri)    
-    #processor.doMarketAnalysis(config)
-    #processor.doStockAnalysis(config)    
-
-    # send notification
-    helper.send_execution_report(
-        config, 
-        subject="HKEX Market Analysis Completed",
-        body_html="<p>The daily market statistics pipeline ran successfully.</p>",
-    )    
+    statProcessor = StatisticsProcessor(dbHelper=dbHelper, avienUri=avienUri)    
+    statProcessor.doMarketAnalysis(config)
+    statProcessor.doStockAnalysis(config)
