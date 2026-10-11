@@ -4,6 +4,7 @@ import certifi
 import logging
 from translate import Translator
 import pandas as pd
+import sys
 
 
 # 1. 設定日誌格式：包含 [時間] [層級] 檔案名稱:行數 - 訊息
@@ -36,3 +37,4 @@ def moveCol():
 # dummy()    
 
 moveCol()
+# sys.exit(-1)

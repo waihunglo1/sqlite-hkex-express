@@ -1,6 +1,7 @@
 import pandas as pd
 import requests
 import logging
+import sys
 from common import market_parameter as marketParameter
 from common import utility as helper
 
@@ -21,6 +22,40 @@ def fetch(url:str):
     logging.info(f"Downloaded JSON Payload: {helper.format_bytes(len(response.content))}")
     return response.json()
 
+def cleanDf(config, items):
+    # Convert date to standard YYYYMMDD string format
+    # formatted_date = pd.to_datetime(raw_date).strftime("%Y%m%d")
+    try:
+        formatted_date = helper.retrieveLatestTradingDate(config["YAHOO-FINANCE"], "%Y%m%d")
+        logging.info(f"📅 Extracted Trade Date: {formatted_date}")
+
+        # Build DataFrame from raw items
+        df = pd.DataFrame(items)
+
+        # Normalize column names to lower case
+        df.columns = [col.lower().replace(" ", "_") for col in df.columns]
+
+        # 2. Assign the YYYYMMDD date to 'dt' column
+        df["dt"] = formatted_date
+        df["date"] = formatted_date #display purpose
+
+        # 3. Drop the first row to remove header/summary meta-data
+        df_clean = df.iloc[1:].copy()
+
+        # Filter out any invalid rows where symbol is missing or empty
+        df_clean = df_clean[
+            df_clean["symbol"].notna()
+            & (df_clean["symbol"].astype(str).str.strip() != "")
+        ]
+
+        return df_clean
+    except Exception as e:
+        logging.error(f"❌ ⚪ 未知錯誤: {e}")
+        sys.exit(-1)
+
+    return
+
+
 def store(dbHelper, table_name:str, response):
     # Parse JSON payload structure
     if isinstance(response, dict):
@@ -33,30 +68,7 @@ def store(dbHelper, table_name:str, response):
         logging.error(response) 
         return
 
-    # Convert date to standard YYYYMMDD string format
-    # formatted_date = pd.to_datetime(raw_date).strftime("%Y%m%d")
-    formatted_date = helper.retrieveLatestTradingDate(config["YAHOO-FINANCE"], "%Y%m%d")
-    logging.info(f"📅 Extracted Trade Date: {formatted_date}")
-
-    # Build DataFrame from raw items
-    df = pd.DataFrame(items)
-
-    # Normalize column names to lower case
-    df.columns = [col.lower().replace(" ", "_") for col in df.columns]
-
-    # 2. Assign the YYYYMMDD date to 'dt' column
-    df["dt"] = formatted_date
-    df["date"] = formatted_date #display purpose
-
-    # 3. Drop the first row to remove header/summary meta-data
-    df_clean = df.iloc[1:].copy()
-
-    # Filter out any invalid rows where symbol is missing or empty
-    df_clean = df_clean[
-        df_clean["symbol"].notna()
-        & (df_clean["symbol"].astype(str).str.strip() != "")
-    ]
-
+    df_clean = cleanDf()
     logging.info("\n" + df_clean.head(5).to_string())
     rowUpdated = dbHelper.populateToSctrTable(df_clean, table_name)
     logging.info(f"✅ Successfully upserted {rowUpdated} records into '{table_name}'.")

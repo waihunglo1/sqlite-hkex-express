@@ -14,9 +14,17 @@ QUERY_SYMBOL = ""  # e.g., '2697.HK'
 if __name__ == "__main__": 
     config, dbHelper, avienUri = marketParameter.parse_argument()
 
-    # where clause
-    where_clause_str = helper.sqlClean(config['DAILY_PRICE_PROCESSOR']['WHERE_CLAUSE'])
+    try:
+        latestTradingDate = helper.retrieveLatestTradingDate(config["YAHOO-FINANCE"], "%Y%m%d")
+        logging.info(f"Trading date : {latestTradingDate}")
 
-    # Pass helper to your processor
-    processor = DailyPriceProcessor(dbHelper=dbHelper, whereClause=where_clause_str)
-    processor.process_data_local(QUERY_DATE, QUERY_SYMBOL)
+        # where clause
+        where_clause_str = helper.sqlClean(config['DAILY_PRICE_PROCESSOR']['WHERE_CLAUSE'])
+
+        # Pass helper to your processor
+        processor = DailyPriceProcessor(dbHelper=dbHelper, whereClause=where_clause_str)
+        processor.process_data_local(latestTradingDate, QUERY_SYMBOL)
+    except Exception as e:
+        logging.error(f"❌ ⚪ 未知錯誤: {e}")
+        sys.exit(-1)
+
