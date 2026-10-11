@@ -35,9 +35,8 @@ def store(dbHelper, table_name:str, response):
 
     # Convert date to standard YYYYMMDD string format
     # formatted_date = pd.to_datetime(raw_date).strftime("%Y%m%d")
-    last_trading_date = helper.retrieveLatestTradingDate(config["YAHOO-FINANCE"])
-    formatted_date = pd.to_datetime(last_trading_date).strftime("%Y%m%d")
-    logging.info(f"📅 Extracted Trade Date: {formatted_date} (raw: {last_trading_date})")
+    formatted_date = helper.retrieveLatestTradingDate(config["YAHOO-FINANCE"], "%Y%m%d")
+    logging.info(f"📅 Extracted Trade Date: {formatted_date}")
 
     # Build DataFrame from raw items
     df = pd.DataFrame(items)

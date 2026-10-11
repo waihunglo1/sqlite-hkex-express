@@ -5,6 +5,7 @@ import sys
 from dotenv import load_dotenv
 from .sqlitehelper import SqliteDbHelper
 from .duckdb_helper import DuckDbHelper
+from common.JsonConfig import JsonConfig
 
 # Execute initialization immediately on package import
 load_dotenv('.env')
@@ -40,6 +41,7 @@ sys.stderr.reconfigure(encoding="utf-8")
 
 # read init
 analyst_ini_path = os.getenv("ANALYST_DATA_INI")
+resend_json_path = os.getenv("RESEND_JSON")
 config = configparser.ConfigParser()
 
 if analyst_ini_path and os.path.exists(analyst_ini_path):
@@ -53,6 +55,10 @@ if analyst_ini_path and os.path.exists(analyst_ini_path):
 
     # avienUri
     avienUri = avienConnectionString()  
+
+    # jsonconfig
+    resendJsonConfig = JsonConfig(resend_json_path)
+    resendJsonConfig.populateToConfigMap(config, "RESEND")
 
 else:
     logging.warning("ANALYST_DATA_INI path is missing or invalid.")

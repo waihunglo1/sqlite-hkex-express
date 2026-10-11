@@ -9,6 +9,7 @@ import re
 import zipfile
 import sys
 import yfinance as yf
+import resend
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -330,17 +331,37 @@ def format_bytes(size_in_bytes: int) -> str:
     else:
         return f"{size_in_bytes / (1024 * 1024):.2f} MB"
 
-def retrieveLatestTradingDate(config):
+def retrieveLatestTradingDate(config, format:str="%Y-%m-%d"):
     yfProductStr = config["LATEST_TRADING_DATE_PRODUCT"]
     # Download a short window of recent market data for a major ticker
     ticker = yf.Ticker(yfProductStr) # S&P 500 Index
     recent_data = ticker.history(period="5d")
 
     # Extract the date of the very last row in the DataFrame
-    last_trading_date = recent_data.index[-1].strftime('%Y-%m-%d')
+    last_trading_date = recent_data.index[-1].strftime(format)
 
     logging.info(f"The latest {yfProductStr} trading date was: {last_trading_date}")
     return last_trading_date
-    
+
+def send_execution_report(config, subject: str, body_html: str) -> None:
+
+    resend.api_key = config["RESEND"]["API_KEY"];
+
+    if not resend.api_key:
+        raise ValueError("RESEND_API_KEY is missing from config .resend.json")
+
+    params = {
+        "from": config["RESEND"]["SENDER_EMAIL"],
+        "to": config["RESEND"]["RECIPIENT_EMAIL"],
+        "subject": subject,
+        "html": body_html,
+    }
+
+    try:
+        response = resend.Emails.send(params)
+        logging.info(f"✅ Email sent successfully! ID: {response.get('id')}")
+    except Exception as e:
+        logging.error(f"❌ Failed to send email via Resend: {e}")
+
 if __name__ == "__main__":
     logging.info("This is a different version of the module.py file.")
