@@ -200,7 +200,7 @@ def financial_term(
     """Translates financial sector/industry names into Traditional Chinese."""
     if not english_name or not isinstance(english_name, str):
         msg = f"Unable to translate : {symbol} / value: '{english_name}'"
-        logging.warning(msg)
+        # logging.warning(msg)
 
         if error_records is not None:
             error_records.append(

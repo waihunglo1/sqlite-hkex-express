@@ -29,7 +29,7 @@ class HkexPriceFiller():
 
     def traverse_dir(self):
         """Traverses configured directory for HKEX files and processes them."""
-        hkex_path = os.path.join(os.getcwd(), self.config["HKEX"]["DOWNLOAD_PATH"])
+        hkex_path = os.path.join(os.getcwd(), self.config["TICKERS"]["DOWNLOAD_PATH"])
         file_regex = re.compile(r"^d(\d{6})e\.htm$")
 
         if not os.path.exists(hkex_path):
@@ -56,7 +56,7 @@ class HkexPriceFiller():
                     quoteParser.parse_hkex_file(self.dbHelper, file_full_path)
 
     def fill(self):
-        hkexConfig = self.config["HKEX"]
+        hkexConfig = self.config["TICKERS"]
 
         # download historical quote html file
         self.downloadHistoricalQuoteFile(hkexConfig)

@@ -10,6 +10,6 @@ Write-Host "=== Starting backup ===" -ForegroundColor Cyan
 
 # 1. Run Python Script
 Write-Host "Running Python backup data" -ForegroundColor Yellow
-cmd /c "py scripts/backup-db.py 2>&1" | Tee-Object -FilePath $LogFile -Append
+cmd /c "copy data/*market-sqlite.db 'G:\My Drive\backup\sqlite-hkex-express-data'" | Tee-Object -FilePath $LogFile -Append
 
 Write-Host "=== Backup done. Log saved to $LogFile ===" -ForegroundColor Gree
