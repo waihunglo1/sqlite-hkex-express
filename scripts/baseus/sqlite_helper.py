@@ -77,7 +77,7 @@ class SqliteDbHelper(BaseDbHelper):
                 cursor = conn.cursor()
                 cursor.executemany(sql, param_tuples)
                 conn.commit()
-                return len(prices)
+                return cursor.rowcount if cursor.rowcount != -1 else len(prices)
         except sqlite3.Error as e:
             logging.error(f"❌ ⚫ 其他 SQLite 錯誤: {e}")
             sys.exit(1)
@@ -196,8 +196,8 @@ class SqliteDbHelper(BaseDbHelper):
                 
                 cursor.executemany(sql, data_to_insert)
                 conn.commit()
-                return len(data_to_insert)
-                
+
+                return cursor.rowcount if cursor.rowcount != -1 else len(data_to_insert)    
         except sqlite3.Error as e:
             logging.error(f"❌ ⚫ 其他 SQLite 錯誤: {e}")
             sys.exit(1)
@@ -240,7 +240,29 @@ class SqliteDbHelper(BaseDbHelper):
             logging.error(f"❌ ⚪ 未知錯誤: {e}")
             sys.exit(1)                
 
-    def insertOrReplaceSctrTable(self, records, table_name, insert_cols):
+    def populateToSctrTable(self, df_clean, table_name):
+        # Restrict DataFrame columns to ONLY match defined SQLite columns
+        valid_db_columns = [
+            "dt",
+            "symbol",
+            "name",
+            "sctr",
+            "close",
+            "chg_pct",
+            "vol",
+            "marketcap",
+            "delta",
+            "industry",
+            "sector"
+        ]
+        insert_cols = [col for col in valid_db_columns if col in df_clean.columns]
+        df_clean = df_clean[insert_cols]
+
+        # Convert to dictionary records for binding
+        records = df_clean.to_dict(orient="records")
+        return self._insertOrReplaceSctrTable(records, table_name, insert_cols)
+
+    def _insertOrReplaceSctrTable(self, records, table_name, insert_cols):
         # Prepare SQLite Connection and initialize table
         self.init_sctr_table(table_name)
 
@@ -257,6 +279,8 @@ class SqliteDbHelper(BaseDbHelper):
                 cursor = conn.cursor()
                 cursor.executemany(insert_sql, records)
                 conn.commit()
+
+                return cursor.rowcount if cursor.rowcount != -1 else len(records)
         except sqlite3.Error as e:
             logging.error(f"❌ ⚫ 其他 SQLite 錯誤: {e}")
             sys.exit(1)

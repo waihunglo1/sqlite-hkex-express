@@ -73,8 +73,7 @@ class BaseDbHelper(ABC):
                 cursor.executemany(static_sql, data_tuples)
                 conn.commit()
                 logging.info(f"✅ 成功將 {len(hist_final)} 筆歷史數據以 100% 靜態安全語法更新至資料庫。")
-
-                return len(data_tuples)
+                return cursor.rowcount if cursor.rowcount != -1 else len(data_tuples)
         except Exception as e:
             logging.error(f"❌ 寫入資料庫時出錯: {e}")
 
@@ -288,7 +287,7 @@ class BaseDbHelper(ABC):
                 cursor = conn.cursor()
                 cursor.executemany(sql, data_to_insert)
                 conn.commit()
-                return len(data_to_insert)
+                return cursor.rowcount if cursor.rowcount != -1 else len(data_to_insert)
         except sqlite3.Error as e:
             logging.error(f"❌ ⚫ 其他 SQLite 錯誤: {e}")
             sys.exit(1)

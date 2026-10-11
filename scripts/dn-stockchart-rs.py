@@ -35,7 +35,7 @@ def store(dbHelper, table_name:str, response):
 
     # Convert date to standard YYYYMMDD string format
     # formatted_date = pd.to_datetime(raw_date).strftime("%Y%m%d")
-    last_trading_date = helper.retrieveLastTradingDate()
+    last_trading_date = helper.retrieveLatestTradingDate(config["YAHOO-FINANCE"])
     formatted_date = pd.to_datetime(last_trading_date).strftime("%Y%m%d")
     logging.info(f"📅 Extracted Trade Date: {formatted_date} (raw: {last_trading_date})")
 
@@ -59,29 +59,8 @@ def store(dbHelper, table_name:str, response):
     ]
 
     logging.info("\n" + df_clean.head(5).to_string())
-
-    # Restrict DataFrame columns to ONLY match defined SQLite columns
-    valid_db_columns = [
-        "dt",
-        "symbol",
-        "name",
-        "sctr",
-        "close",
-        "chg_pct",
-        "vol",
-        "marketcap",
-        "delta",
-        "industry",
-        "sector"
-    ]
-    insert_cols = [col for col in valid_db_columns if col in df_clean.columns]
-    df_clean = df_clean[insert_cols]
-
-    # Convert to dictionary records for binding
-    records = df_clean.to_dict(orient="records")
-    dbHelper.insertOrReplaceSctrTable(records, table_name, insert_cols)
-
-    logging.info(f"✅ Successfully upserted {len(df_clean)} records into '{table_name}'.")
+    rowUpdated = dbHelper.populateToSctrTable(df_clean, table_name)
+    logging.info(f"✅ Successfully upserted {rowUpdated} records into '{table_name}'.")
 
 if __name__ == "__main__":
     config, dbHelper, avienUri =  marketParameter.parse_argument()

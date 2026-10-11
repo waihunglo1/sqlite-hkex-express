@@ -1,7 +1,8 @@
 import logging
+from typing import Any, Dict, List, Optional
 
-# 1. 原始對照表
-_SECTOR_RAW = {
+# Raw mapping tables
+_SECTOR_RAW: Dict[str, str] = {
     "Basic Materials": "基礎材料",
     "Communication Services": "通訊服務",
     "Telecommunications": "通訊服務",
@@ -18,12 +19,11 @@ _SECTOR_RAW = {
     "Technology": "科技",
     "Utilities": "公用事業",
     "NONE": "其他",
-    "Uncategorized": "其他",    
-    "": "其他"
+    "Uncategorized": "其他",
+    "": "其他",
 }
 
-_INDUSTRY_RAW = {
-    # --- 第一批行業別 ---
+_INDUSTRY_RAW: Dict[str, str] = {
     "Advertising Agencies": "廣告代理",
     "Agricultural Inputs": "農業投入品",
     "Auto & Truck Dealerships": "汽車與卡車經銷商",
@@ -61,7 +61,7 @@ _INDUSTRY_RAW = {
     "Integrated Freight & Logistics": "綜合貨運與物流",
     "Internet Content & Information": "網路內容與資訊",
     "Internet Retail": "網路零售 (電商)",
-    "Leisure": "休閒娛樂",
+    "Leisure": "休休閒娛樂",
     "Medical Devices": "醫療器材",
     "Medical Distribution": "醫療物資分銷",
     "Medical Instruments & Supplies": "醫療儀器與用品",
@@ -89,8 +89,6 @@ _INDUSTRY_RAW = {
     "Travel Services": "旅遊服務",
     "Utilities - Regulated Gas": "受管制燃氣公用事業",
     "Utilities - Regulated Water": "受管制水務公用事業",
-
-    # --- 新增的第二批行業別 ---
     "Aerospace & Defense": "航太與國防",
     "Airlines": "航空公司",
     "Airports & Air Services": "機場及航空服務",
@@ -99,7 +97,6 @@ _INDUSTRY_RAW = {
     "Apparel Retail": "服飾零售",
     "Asset Management": "資產管理",
     "Banks - Diversified": "綜合型銀行",
-    "Banks—Regional": "區域性銀行",  # 處理長破折號變體
     "Beverages - Brewers": "飲料 - 啤酒釀造商",
     "Broadcasting": "廣播電視",
     "Building Materials": "建築材料",
@@ -109,7 +106,6 @@ _INDUSTRY_RAW = {
     "Consulting Services": "諮詢服務",
     "Copper": "銅業",
     "Department Stores": "百貨公司",
-    "Drug Manufacturers—Specialty & Generic": "專利藥與學名藥製造商", # 處理長破折號變體
     "Electronics & Computer Distribution": "電子與電腦分銷",
     "Farm & Heavy Construction Machinery": "農業與重型建築機械",
     "Financial Data & Stock Exchanges": "金融數據與證券交易所",
@@ -141,16 +137,12 @@ _INDUSTRY_RAW = {
     "Publishing": "出版業",
     "Railroads": "鐵路運輸",
     "Real Estate - Diversified": "多元化房地產",
-    "Real Estate—Development": "房地產開發",  # 處理長破折號變體
-    "Real Estate—Diversified": "多元化房地產",  # 處理長破折號變體
     "Residential Construction": "住宅建造",
     "Resorts & Casinos": "度假村與賭場",
     "Scientific & Technical Instruments": "科學與技術儀器",
     "Security & Protection Services": "安全與防護服務",
     "Semiconductor Equipment & Materials": "半導體設備與材料",
     "Shell Companies": "殼公司 (SPAC)",
-    "Software—Application": "應用軟體",        # 處理長破折號變體
-    "Software—Infrastructure": "基礎架構軟體",    # 處理長破折號變體
     "Specialty Business Services": "專業商業服務",
     "Telecom Services": "電信服務",
     "Textile Manufacturing": "紡織製造",
@@ -161,41 +153,82 @@ _INDUSTRY_RAW = {
     "Utilities - Independent Power Producers": "獨立電力生產商",
     "Utilities - Regulated Electric": "受管制電力公用事業",
     "Utilities - Renewable": "再生能源公用事業",
-    "Utilities - Diversified" : "多元化",
+    "Utilities - Diversified": "多元化",
     "Waste Management": "廢棄物管理",
-    "Discount Stores" : "折扣店",
-    "Healthcare Plans" : "醫療保健計劃",
-    "Insurance - Diversified" : "保險 - 多元化",
-    "Insurance - Specialty" : "保險 - 專業領域",
-    "REIT - Diversified" : "房託 - 多元化",
-    "REIT - Healthcare Facilities" : "房託 - 醫療保健設施",
-    "REIT - Hotel & Motel" : "房託 - 飯店及汽車旅館",
-    "REIT - Industrial" : "房託 - 工業地產",
-    "REIT - Mortgage" : "房託 - 抵押貸款",
-    "REIT - Office" : "房託 - 辦公大樓",
-    "REIT - Residential" : "房託 - 住宅",
-    "REIT - Retail" : "房託 - 零售",
-    "REIT - Specialty" : "房託 - 專業領域",
+    "Discount Stores": "折扣店",
+    "Healthcare Plans": "醫療保健計劃",
+    "Insurance - Diversified": "保險 - 多元化",
+    "Insurance - Specialty": "保險 - 專業領域",
+    "REIT - Diversified": "房託 - 多元化",
+    "REIT - Healthcare Facilities": "房託 - 醫療保健設施",
+    "REIT - Hotel & Motel": "房託 - 飯店及汽車旅館",
+    "REIT - Industrial": "房託 - 工業地產",
+    "REIT - Mortgage": "房託 - 抵押貸款",
+    "REIT - Office": "房託 - 辦公大樓",
+    "REIT - Residential": "房託 - 住宅",
+    "REIT - Retail": "房託 - 零售",
+    "REIT - Specialty": "房託 - 專業領域",
     "UNKNOWN": "未知",
+    "UNASSIGNED": "未知",
     "NONE": "其他",
-    "": "其他"    
+    "": "其他",
 }
 
-# 2. 自動將字典的 Keys 轉換為全大寫 (字典推導式)
-SECTOR_TRANSLATION = {k.upper(): v for k, v in _SECTOR_RAW.items()}
-INDUSTRY_TRANSLATION = {k.upper(): v for k, v in _INDUSTRY_RAW.items()}
 
-# 3. 安全查詢函數 (自動將輸入值轉為大寫，並移除前後空格)
-def financial_term(english_name, term_type="industry", symbol=""):
+def _normalize_key(key: str) -> str:
+    """Strips whitespace, converts to upper-case, and unifies all dash variations."""
+    if not key:
+        return ""
+    return key.strip().upper().replace("—", "-").replace("–", "-")
+
+
+# Pre-process lookups: normalize all keys once on startup
+SECTOR_TRANSLATION: Dict[str, str] = {
+    _normalize_key(k): v for k, v in _SECTOR_RAW.items()
+}
+INDUSTRY_TRANSLATION: Dict[str, str] = {
+    _normalize_key(k): v for k, v in _INDUSTRY_RAW.items()
+}
+
+
+def financial_term(
+    english_name: Optional[str],
+    symbol: str,
+    error_records: Optional[List[Dict[str, Any]]] = None,
+    term_type: str = "industry",
+) -> str:
+    """Translates financial sector/industry names into Traditional Chinese."""
     if not english_name or not isinstance(english_name, str):
-        logging.error(f"Unable to translate : {symbol} / term_type :{english_name}")
-        return english_name
-    
-    # 選擇對照字典
-    mapping_dict = INDUSTRY_TRANSLATION if term_type == "industry" else SECTOR_TRANSLATION
-    
-    # 清洗輸入值：轉大寫、剔除首尾空白、並修正長短破折號異同
-    lookup_key = english_name.strip().upper().replace("—", "-")
-    
-    # 查不到時預設回傳原名 (維持原有大小寫)
+        msg = f"Unable to translate : {symbol} / value: '{english_name}'"
+        logging.warning(msg)
+
+        if error_records is not None:
+            error_records.append(
+                {
+                    "symbol": symbol,
+                    "error": "translator.financial_term",
+                    "message": msg,
+                }
+            )
+        english_name = "UNKNOWN"
+
+    mapping_dict = (
+        INDUSTRY_TRANSLATION if term_type == "industry" else SECTOR_TRANSLATION
+    )
+    lookup_key = _normalize_key(english_name)
+
     return mapping_dict.get(lookup_key, english_name)
+
+
+def financial_term_for_sector(
+    english_name: str, symbol: str, error_records: Optional[List[Dict[str, Any]]] = None
+) -> str:
+    """Convenience wrapper for translating Sector names."""
+    return financial_term(english_name, symbol, error_records, term_type="sector")
+
+
+def financial_term_for_industry(
+    english_name: str, symbol: str, error_records: Optional[List[Dict[str, Any]]] = None
+) -> str:
+    """Convenience wrapper for translating Industry names."""
+    return financial_term(english_name, symbol, error_records, term_type="industry")

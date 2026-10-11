@@ -10,18 +10,13 @@ from common import utility as helper
 if __name__ == "__main__": 
     config, dbHelper, avienUri =  marketParameter.parse_argument()    
 
-    # indexes data
-    indexes_str = config['YAHOO-FINANCE']['INDEXES'] # ^GSPC, ^NDX
-    indexes = helper.splitStringToArray(indexes_str)
-
     # processing
-    processor = StatisticsProcessor(dbHelper=dbHelper, avienUri=avienUri, indexes=indexes)
+    processor = StatisticsProcessor(dbHelper=dbHelper, avienUri=avienUri)
 
     if config['PARAMETER']['MARKET'] == "us":
         processor.populateStockChartsETFRelativeStrength(config)
 
-    processor.loadIndexDataByYahooFinance()
-    processor.populateSectorStatistics(config)
-    processor.populateMarketStatistics(config)
-    processor.populateIndustryStatistics(config)
+    processor.doMarketAnalysis(config)
+    processor.doStockAnalysis(config)
+    processor.doIndustryStatistic(config)
     processor.populateAvien(config)

@@ -140,7 +140,7 @@ def populate_df(df, spreadSheetId:str, workSheetId:str):
             dataframe = df,
             row = 1,
             col = 1,
-            include_index = True,
+            include_index = False,
             include_column_header = True,
         )               
     except Exception as e:

@@ -8,8 +8,7 @@ from common import market_parameter as marketParameter
 from common.ticker_extractor import TickerExtractor
 from common.yf_price_filler import YahooQueryPriceFiller
 
-def yfFillStockInfo(tickerMap, config, dbHelper):
-    yahooQueryStockInfoFiller = YahooQueryStockInfoFiller(config, dbHelper)
+def yfFillStockInfo(tickerMap, yahooQueryStockInfoFiller):
     errorRecords = yahooQueryStockInfoFiller.fill(tickerMap)
     if len(errorRecords) > 0:
         df = pd.DataFrame(errorRecords)
@@ -24,12 +23,16 @@ def yfFillStockInfo(tickerMap, config, dbHelper):
 if __name__ == "__main__": 
     config, dbHelper, avienUri = marketParameter.parse_argument()
 
+    # load indexes
+    yahooQueryStockInfoFiller = YahooQueryStockInfoFiller(config, dbHelper)
+    yahooQueryStockInfoFiller.loadIndexDataByYahooFinance()
+
     # extract Ticker from xls
     tickerExtractor = TickerExtractor(config, dbHelper)
     tickerMap = tickerExtractor.tickerMap()
 
     # fill stock info from yahoo query
-    yfFillStockInfo(tickerMap, config, dbHelper)
+    yfFillStockInfo(tickerMap, yahooQueryStockInfoFiller)
 
     # fill daily price
     if config['PARAMETER']['MARKET'] == "us":

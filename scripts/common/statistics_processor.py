@@ -1,283 +1,232 @@
 import logging
+from typing import Any, Dict, List, Optional
 import pandas as pd
-import yfinance as yf
 import psycopg
+
 from . import basedbhelper as dbHelper
 from common import gsheethelper as gsheetHelper
 
-class StatisticsProcessor():
 
-    def __init__(self, dbHelper, avienUri, indexes=["^HSI", "^HSCE"]):
+VALID_SECTORS = [
+    "XLB", "XLC", "XLY", "XLP", "XLE", "XLF",
+    "XLV", "XLI", "XLRE", "XLK", "XLU", "XLX"
+]
+
+class StatisticsProcessor:
+
+    def __init__(self, dbHelper, avienUri: str):
         self.dbHelper = dbHelper
-        self.indexes = indexes
         self.avienUri = avienUri
 
-    def loadIndexDataByYahooFinance(self):
-        start_date = "2006-10-13"
+    # -------------------------------------------------------------------------
+    # Helper Methods
+    # -------------------------------------------------------------------------
+    def _read_data(self, sql: str, label: str) -> pd.DataFrame:
+        """Helper to safely fetch DataFrame from database and log status."""
+        df = self.dbHelper.readDataFrame(sql)
+        if df.empty:
+            logging.info(f"⚠️ No data returned for [{label}]. Task skipped.")
+            return pd.DataFrame()
+        
+        logging.info(f"{label}:\n{df.iloc[:5, :10].to_string()}")
+        return df
 
-        for index_symbol in self.indexes:
-            df = yf.download(
-                index_symbol,
-                start=start_date,
-                interval="1d",
-                progress=False,
-                multi_level_index=False,  # Forces 1D columns
-            )
+    def _export_to_gsheet(self, df: pd.DataFrame, config_section: Dict[str, Any]) -> None:
+        """Helper to push DataFrame results to Google Sheets based on config."""
+        if df.empty:
+            return
+        
+        spreadsheet_id = config_section.get("SPREAD_SHEET_ID")
+        worksheet_id = config_section.get("WORK_SHEET_ID")
+        
+        if spreadsheet_id and worksheet_id:
+            gsheetHelper.populate_df(df, spreadsheet_id, worksheet_id)
 
-            if df.empty:
-                continue
+    @staticmethod
+    def _ensure_dt_column(df: pd.DataFrame) -> pd.DataFrame:
+        """Ensures 'dt' is present as a column rather than an index."""
+        if "dt" not in df.columns and df.index.name == "dt":
+            return df.reset_index()
+        return df
 
-            df = df.reset_index()
+    # -------------------------------------------------------------------------
+    # Market & Sector Statistics
+    # -------------------------------------------------------------------------
+    def populateSectorStatistics(self, config: Dict[str, Any]) -> pd.DataFrame:
+        sql = config["STATISTICS_MARKET_ANALYSIS"]["SQL.02"]
+        raw_rows = self.dbHelper.fetchAllRows(sql)
+        
+        if not raw_rows:
+            logging.info("⚠️ Sector statistics dataset empty.")
+            return pd.DataFrame()
 
-            # Vectorized column mapping
-            records = pd.DataFrame(
-                {
-                    "symbol": index_symbol,
-                    "period": "D",
-                    "dt": df["Date"].dt.strftime("%Y%m%d"),
-                    "tm": "000000",
-                    "open": df["Open"],
-                    "high": df["High"],
-                    "low": df["Low"],
-                    "close": df["Close"],
-                    "volume": df["Volume"],
-                    "adj_close": df["Close"],
-                    "open_int": 0,
-                }
-            )
+        df_raw = pd.DataFrame(raw_rows)
+        
+        # Filter for known sectors only
+        invalid_sectors = df_raw[~df_raw["sector"].isin(VALID_SECTORS)]
+        if not invalid_sectors.empty:
+            for _, row in invalid_sectors.iterrows():
+                logging.info(f"[ERROR] Unknown sector: {row['sector']} on {row['dt']}")
 
-            logging.info("\n" + records.tail(5).to_string())
+        df_filtered = df_raw[df_raw["sector"].isin(VALID_SECTORS)]
 
-            rows = records.to_dict(orient="records")
-            updatedRows = self.dbHelper.insertDailyStockPrice(rows)
-            logging.info(f"Yahoo indexes Processed[{index_symbol}] : {len(rows)} / Updated : {updatedRows}")
+        # Pivot sector statistics into flat columns per date
+        pivot_u4sm = df_filtered.pivot_table(index="dt", columns="sector", values="u4sm").add_suffix("_U4SM")
+        pivot_d4sm = df_filtered.pivot_table(index="dt", columns="sector", values="d4sm").add_suffix("_D4SM")
+        pivot_sm = df_filtered.pivot_table(index="dt", columns="sector", values="sm").add_suffix("_SM")
 
-    def newSectorStats(self) -> dict:
-        return {
-            "dt": "",
-            "XLB_U4SM": 0,
-            "XLB_D4SM": 0,
-            "XLB_SM": 0,
-            "XLC_U4SM": 0,
-            "XLC_D4SM": 0,
-            "XLC_SM": 0,
-            "XLY_U4SM": 0,
-            "XLY_D4SM": 0,
-            "XLY_SM": 0,
-            "XLP_U4SM": 0,
-            "XLP_D4SM": 0,
-            "XLP_SM": 0,
-            "XLE_U4SM": 0,
-            "XLE_D4SM": 0,
-            "XLE_SM": 0,
-            "XLF_U4SM": 0,
-            "XLF_D4SM": 0,
-            "XLF_SM": 0,
-            "XLV_U4SM": 0,
-            "XLV_D4SM": 0,
-            "XLV_SM": 0,
-            "XLI_U4SM": 0,
-            "XLI_D4SM": 0,
-            "XLI_SM": 0,
-            "XLRE_U4SM": 0,
-            "XLRE_D4SM": 0,
-            "XLRE_SM": 0,
-            "XLK_U4SM": 0,
-            "XLK_D4SM": 0,
-            "XLK_SM": 0,
-            "XLU_U4SM": 0,
-            "XLU_D4SM": 0,
-            "XLU_SM": 0,
-            "XLX_U4SM": 0,
-            "XLX_D4SM": 0,
-            "XLX_SM": 0,
-        }
+        df_sector_stats = pd.concat([pivot_u4sm, pivot_d4sm, pivot_sm], axis=1).fillna(0).reset_index()
 
+        # Guarantee presence of all sector columns even if missing from SQL response
+        expected_cols = ["dt"] + [f"{sec}_{metric}" for sec in VALID_SECTORS for metric in ["U4SM", "D4SM", "SM"]]
+        df_sector_stats = df_sector_stats.reindex(columns=expected_cols, fill_value=0)
 
-    def populateSectorStatistics(self, config):
-        sql = config['STATISTICS_PROCESSOR']['SECTOR_STATS_SQL']
-        sector_stats = self.dbHelper.fetchAllRows(sql)
+        logging.info("Sector Statistics:\n" + df_sector_stats.iloc[:5, :10].to_string())
+        return df_sector_stats
 
-        stats = self.newSectorStats()
-        last_dt = ""
-        count = 0
+    def populateMarketStatistics(self, config: Dict[str, Any]) -> pd.DataFrame:
+        sql = config["STATISTICS_MARKET_ANALYSIS"]["SQL.01"]
+        return self._read_data(sql, "Market Statistics")
 
-        sectorStats = []
+    def doMarketAnalysis(self, config: Dict[str, Any]) -> None:
+        market_df = self.populateMarketStatistics(config)
+        sector_df = self.populateSectorStatistics(config)
 
-        for sector_stat in sector_stats:
-            current_dt = sector_stat["dt"]
-            current_sector = sector_stat["sector"]
+        if market_df.empty:
+            return
 
-            if last_dt != "" and last_dt != current_dt:
-                sectorStats.append(stats)
-                stats = self.newSectorStats()
-                count += 1
+        market_df = self._ensure_dt_column(market_df)
+        sector_df = self._ensure_dt_column(sector_df)
 
+        df_merged = pd.merge(market_df, sector_df, on="dt", how="left")
+        
+        logging.info("Market / Sector Analysis:\n" + df_merged.iloc[:5, :10].to_string())
+        self._export_to_gsheet(df_merged, config["STATISTICS_MARKET_ANALYSIS"])
 
-            stats["dt"] = current_dt
+    # -------------------------------------------------------------------------
+    # Stock Statistics
+    # -------------------------------------------------------------------------
+    def populateStockStatistics(self, config: Dict[str, Any]) -> pd.DataFrame:
+        sql = config["STATISTICS_STOCK_ANALYSIS"]["SQL.01"]
+        return self._read_data(sql, "Stock Statistics")
 
-            # Dynamically set sector fields
-            valid_sectors = [
-                "XLB",
-                "XLC",
-                "XLY",
-                "XLP",
-                "XLE",
-                "XLF",
-                "XLV",
-                "XLI",
-                "XLRE",
-                "XLK",
-                "XLU",
-                "XLX",
-            ]
+    def doStockAnalysis(self, config: Dict[str, Any]) -> None:
+        stock_df = self.populateStockStatistics(config)
+        self._export_to_gsheet(stock_df, config["STATISTICS_STOCK_ANALYSIS"])
 
-            if current_sector in valid_sectors:
-                stats[f"{current_sector}_U4SM"] = sector_stat["u4sm"]
-                stats[f"{current_sector}_D4SM"] = sector_stat["d4sm"]
-                stats[f"{current_sector}_SM"] = sector_stat["sm"]
+    # -------------------------------------------------------------------------
+    # Industry Statistics
+    # -------------------------------------------------------------------------
+    def populateIndustryStatistics(self, config: Dict[str, Any]) -> pd.DataFrame:
+        sql_query = config["STATISTICS_INDUSTRY_ANALYSIS"]["SQL.01"]
+        df_raw = self.dbHelper.readDataFrame(sql_query)
+
+        if df_raw.empty:
+            logging.info("⚠️ No data returned for Industry Statistics. Skipping.")
+            return pd.DataFrame()
+
+        # Create pivots for up, down, and 50d SMA %
+        up_pivot = df_raw.pivot_table(index="industry", columns="dt", values="up4pct1d", aggfunc="sum").fillna(0)
+        dn_pivot = df_raw.pivot_table(index="industry", columns="dt", values="dn4pct1d", aggfunc="sum").fillna(0)
+        sma_pivot = df_raw.pivot_table(index="industry", columns="dt", values="above_50d_sma_pct", aggfunc="sum").fillna(0)
+
+        # Sort dates descending (newest first)
+        unique_dates = sorted(up_pivot.columns, reverse=True)
+
+        up_aligned = up_pivot.reindex(columns=unique_dates, fill_value=0).astype(int)
+        dn_aligned = dn_pivot.reindex(columns=unique_dates, fill_value=0).astype(int)
+        sma_aligned = sma_pivot.reindex(columns=unique_dates, fill_value=0).astype(int)
+
+        combined_df = pd.DataFrame(index=up_aligned.index)
+
+        # Build 90-day window metrics
+        for i in range(90):
+            day_num = i + 1
+            if i < len(unique_dates):
+                date_str = unique_dates[i]
+                combined_df[f"up_day{day_num}"] = up_aligned[date_str]
+                combined_df[f"down_day{day_num}"] = dn_aligned[date_str]
+                combined_df[f"sma50_day{day_num}"] = sma_aligned[date_str]
             else:
-                logging.info(
-                    f"[ERROR] Unknown sector: {current_sector} on {current_dt}"
-                )
+                combined_df[f"up_day{day_num}"] = 0
+                combined_df[f"down_day{day_num}"] = 0
+                combined_df[f"sma50_day{day_num}"] = 0
 
-            last_dt = current_dt
+        # Totals
+        combined_df["total_up_90d"] = up_aligned.sum(axis=1)
+        combined_df["total_down_90d"] = dn_aligned.sum(axis=1)
+        combined_df["total_sma50_90d"] = sma_aligned.sum(axis=1)
 
-        # new_sector_status_to_db(last_stats)
-        df = pd.DataFrame(sectorStats)
-        logging.info("\n" + df.iloc[:5, :10].to_string())
-        updatedRow = self.dbHelper.insertOrReplaceSectorRecords(sectorStats)
-        logging.info(f"Sectors stats updated. Total records: {count} / Row updated : {updatedRow}")
+        # Sort and rearrange columns
+        combined_df = combined_df.sort_values(by=["up_day1", "total_up_90d"], ascending=[False, False]).reset_index()
 
+        ordered_columns = ["industry"]
+        for i in range(1, 91):
+            ordered_columns.extend([f"up_day{i}", f"down_day{i}", f"sma50_day{i}"])
+        ordered_columns.extend(["total_up_90d", "total_down_90d", "total_sma50_90d"])
 
-    def populateMarketStatistics(self, config):
-        sql = config['STATISTICS_PROCESSOR']['MARKET_STATS_SQL']
-        market_stats = self.dbHelper.fetchAllRows(sql)
+        combined_df = combined_df[ordered_columns]
 
-        params = [
-            (
-                ms["dt"],
-                ms["up4pct1d"],
-                ms["dn4pct1d"],
-                ms["up25pctin100d"],
-                ms["dn25pctin100d"],
-                ms["up25pctin20d"],
-                ms["dn25pctin20d"],
-                ms["up50pctin20d"],
-                ms["dn50pctin20d"],
-                ms["noofstocks"],
-                ms["above200smapct"],
-                ms["above150smapct"],
-                ms["above50smapct"],
-                ms["above20smapct"],
-                ms["hsi"],
-                ms["hsce"],
-            )
-            for ms in market_stats
-        ]
+        logging.info("Industry Statistics:\n" + combined_df.iloc[:5, :10].to_string())
+        return combined_df
 
-        df = pd.DataFrame(params)
-        logging.info("\n" + df.head(5).to_string())
-        updatedRow = self.dbHelper.insertOrReplaceMarketRecords(params)
-        logging.info(f"Market stats updated. Total records: {len(market_stats)} / Row updated : {updatedRow}")
+    def doIndustryStatistic(self, config: Dict[str, Any]) -> None:
+        df = self.populateIndustryStatistics(config)
+        self._export_to_gsheet(df, config["STATISTICS_INDUSTRY_ANALYSIS"])
 
-    def populateAvien(self, config):
-        df = self.populate_daily_stock_stats(self.dbHelper, config)
-        self.push_df_to_aiven("daily_stock_stats", df)
-
-    def push_df_to_aiven(self, table_name: str, df: pd.DataFrame):
-        """Clears target Aiven table and uploads DataFrame records in batch."""
-        records = df.to_dict(orient="records")
-        if not records:
-            return
-
-        columns = list(records[0].keys())
-        sql_insert = f"INSERT INTO {table_name} ({', '.join(columns)}) VALUES ({', '.join([f'%({c})s' for c in columns])});"
-
-        with psycopg.connect(self.avienUri) as conn:
-            with conn.cursor() as cur:
-                cur.execute(f"DELETE FROM {table_name};")
-                cur.executemany(sql_insert, records)
-            conn.commit()
-        logging.info(f"Successfully pushed {len(records)} rows to Aiven [{table_name}]")
-
-    def populate_daily_stock_stats(self, dbHelper, config):
-            sql_main = config['STATISTICS_PROCESSOR']['AVIEN_STATS_SQL']
-            df_main = dbHelper.readDataFrame(sql_main)
-
-            # 4. DROP columns that do NOT exist in the PostgreSQL target schema
-            cols_to_drop = [
-                col
-                for col in ["sctr", "normalise_rs","rs"]
-                if col in df_main.columns
-            ]
-            df_main.drop(columns=cols_to_drop, inplace=True)
-
-            return df_main     
-
-    def populateIndustryStatistics(self, config):
-        sql_query = config['STATISTICS_PROCESSOR']['INDUSTRY_STATS_SQL']
+    # -------------------------------------------------------------------------
+    # StockCharts ETF Relative Strength
+    # -------------------------------------------------------------------------
+    def populateStockChartsETFRelativeStrength(self, config: Dict[str, Any]) -> None:
+        sql_query = config["STATISTICS_ETF_ANALYSIS"]["SQL.01"]
         df_raw = self.dbHelper.readDataFrame(sql_query)
-
         if df_raw.empty:
-            logging.info("⚠️ No data returned. Table skipped.")
+            logging.info("⚠️ No data returned for StockCharts ETF RS. Skipping.")
             return
 
-        # 3. Pivot DataFrame: stock.industry vertically (index), dt horizontally (columns)
-        up_df_pivoted = df_raw.pivot_table(
-            index="industry", columns="dt", values="up4pct1d", aggfunc="sum"
-        ).fillna(0)
-
-        # 4. Pivot DataFrame: stock.industry vertically (index), dt horizontally (columns)
-        dn_df_pivoted = df_raw.pivot_table(
-            index="industry", columns="dt", values="dn4pct1d", aggfunc="sum"
-        ).fillna(0) 
-
-        # 5. Pivot DataFrame: stock.industry vertically (index), dt horizontally (columns)
-        above_50d_sma_pct_df_pivoted = df_raw.pivot_table(
-            index="industry", columns="dt", values="above_50d_sma_pct", aggfunc="sum"
-        ).fillna(0)       
-
-        logging.info("above_50d_sma_pct\n" + above_50d_sma_pct_df_pivoted.iloc[:10, :10].to_string())
-
-        df = self.dbHelper.storeIndustryStatistics(up_df_pivoted, dn_df_pivoted, above_50d_sma_pct_df_pivoted)
-
-        logging.info("Industry Statistics:")
-        logging.info("\n" + df.iloc[:5, :10].to_string())
-
-    def populateStockChartsETFRelativeStrength(self, config):
-        sql_query = config['STATISTICS_PROCESSOR']['ETF_DAILY_RS.SQL']
-        spreadSheetId = config['STATISTICS_PROCESSOR']['ETF_DAILY_RS.SPREAD_SHEET_ID']
-        workSheetId = config['STATISTICS_PROCESSOR']['ETF_DAILY_RS.WORK_SHEET_ID']
-
-        # 1. read data from db
-        df_raw = self.dbHelper.readDataFrame(sql_query)
-
-        if df_raw.empty:
-            logging.info("⚠️ No data returned. Table skipped.")
-            return
-
-        # 2. Pivot DataFrame: stock.industry vertically (index), dt horizontally (columns)
         df_pivoted = (
             df_raw.pivot_table(index=["symbol", "name"], columns="dt", values="sctr")
             .fillna(0)
             .sort_index(axis=1, ascending=False)
         )
 
-        # 3. Get the most recent trading date (first column name)
         latest_dt = df_pivoted.columns[0]
+        df_pivoted = df_pivoted.sort_values(by=latest_dt, ascending=False).reset_index()
+        df_pivoted.columns.name = None
 
-        # 4. Sort rows by the latest SCTR score descending
-        df_pivoted = df_pivoted.sort_values(by=latest_dt, ascending=False)
+        logging.info("Stock chart ETF RS Statistics:\n" + df_pivoted.iloc[:5, :10].to_string())
+        self._export_to_gsheet(df_raw, config["STATISTICS_INDUSTRY_ANALYSIS"])
 
-        logging.info("Stock chart ETF RS Statistics:")
-        logging.info("\n" + df_pivoted.iloc[:5, :10].to_string())
+    # -------------------------------------------------------------------------
+    # PostgreSQL / Aiven Integration
+    # -------------------------------------------------------------------------
+    def populateAvien(self, config: Dict[str, Any]) -> None:
+        sql_main = config["AVIEN"]["SQL.01"]
+        df_main = self.dbHelper.readDataFrame(sql_main)
 
-        gsheetHelper.populate_df(df_pivoted, spreadSheetId, workSheetId)
+        # Drop columns not present in Aiven target schema
+        cols_to_drop = [col for col in ["sctr", "normalise_rs", "rs"] if col in df_main.columns]
+        if cols_to_drop:
+            df_main.drop(columns=cols_to_drop, inplace=True)
 
+        self.push_df_to_aiven("daily_stock_stats", df_main)
 
+    def push_df_to_aiven(self, table_name: str, df: pd.DataFrame) -> None:
+        """Clears target Aiven table and uploads DataFrame records in batch."""
+        if df.empty:
+            return
 
+        records = df.to_dict(orient="records")
+        columns = list(records[0].keys())
 
+        columns_formatted = ", ".join(columns)
+        placeholders_formatted = ", ".join([f"%({c})s" for c in columns])
+        sql_insert = f"INSERT INTO {table_name} ({columns_formatted}) VALUES ({placeholders_formatted});"
 
+        with psycopg.connect(self.avienUri) as conn:
+            with conn.cursor() as cur:
+                cur.execute(f"DELETE FROM {table_name};")
+                cur.executemany(sql_insert, records)
+            conn.commit()
 
-
+        logging.info(f"Successfully pushed {len(records)} rows to Aiven [{table_name}]")
