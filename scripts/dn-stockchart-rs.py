@@ -68,7 +68,7 @@ def store(dbHelper, table_name:str, response):
         logging.error(response) 
         return
 
-    df_clean = cleanDf()
+    df_clean = cleanDf(config, items)
     logging.info("\n" + df_clean.head(5).to_string())
     rowUpdated = dbHelper.populateToSctrTable(df_clean, table_name)
     logging.info(f"✅ Successfully upserted {rowUpdated} records into '{table_name}'.")

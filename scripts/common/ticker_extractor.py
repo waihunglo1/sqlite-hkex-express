@@ -12,14 +12,13 @@ class TickerExtractor():
 
     def downloadStockListFile(self):
         # download hkex stock list
-        targetUrl = self.config['HKEX']['URL']
-        downloadPath = self.config['HKEX']['DOWNLOAD_PATH']
-        # downloadFileName = hkexConfig['LIST_OF_SECURITIES']
+        targetUrl = self.config["TICKERS"]["URL"]
+        downloadPath = self.config["TICKERS"]["DOWNLOAD_PATH"]
         helper.downloadByChrome(targetUrl, downloadPath)     
 
     def tickersFromXls(self):
-        downloadPath = self.config['HKEX']['DOWNLOAD_PATH']
-        fileName = self.config['HKEX']['LIST_OF_SECURITIES']
+        downloadPath = self.config["TICKERS"]["DOWNLOAD_PATH"]
+        fileName = self.config["TICKERS"]["LIST_OF_SECURITIES"]
         current_dir = Path.cwd()
         targetPath = os.path.join(str(current_dir), downloadPath)
         save_path = os.path.join(targetPath, fileName)
@@ -51,7 +50,7 @@ class TickerExtractor():
         return tickerMap    
 
     def usTickerFromGitAte329(self):
-        url = self.config['TICKERS']["URL"]
+        url = self.config["TICKERS"]["URL"]
         df = pd.read_csv(url)
         logging.info("\n" + df.head(5).to_string())
         rowUpdated = self.dbHelper.insertOrReplaceStockInfoTickerMap(df)
@@ -62,7 +61,7 @@ class TickerExtractor():
         return column_hashmap
 
     def tickerMap(self):
-        if self.config['PARAMETER']['MARKET'] == "us":
+        if self.config["PARAMETER"]["MARKET"] == "us":
             return self.usTickerFromGitAte329()
         else:
             return self.extractTickerMapFromHkex()
