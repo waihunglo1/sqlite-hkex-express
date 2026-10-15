@@ -15,15 +15,15 @@ if __name__ == "__main__":
     config, dbHelper, avienUri = marketParameter.parse_argument()
 
     try:
-        latestTradingDate = helper.retrieveLatestTradingDate(config["YAHOO-FINANCE"], "%Y%m%d")
-        logging.info(f"Trading date : {latestTradingDate}")
+        # latestTradingDate = helper.retrieveLatestTradingDate(config["YAHOO-FINANCE"], "%Y%m%d")
+        # logging.info(f"Trading date : {latestTradingDate}")
 
         # where clause
         where_clause_str = helper.sqlClean(config['DAILY_PRICE_PROCESSOR']['WHERE_CLAUSE'])
 
         # Pass helper to your processor
         processor = DailyPriceProcessor(dbHelper=dbHelper, whereClause=where_clause_str)
-        processor.process_data_local(latestTradingDate, QUERY_SYMBOL)
+        processor.process_data_local(QUERY_DATE, QUERY_SYMBOL)
     except Exception as e:
         logging.error(f"❌ ⚪ 未知錯誤: {e}")
         sys.exit(-1)

@@ -134,6 +134,10 @@ def populate_df(df, spreadSheetId:str, workSheetId:str):
             # Create worksheet if it does not already exist
             worksheet = sh.add_worksheet(title=workSheetId, rows="1000", cols="30")        
 
+        # 寫入新數據前，先清空整個工作表
+        logging.info("正在清除舊資料...")
+        worksheet.clear()  
+
         # Write entire DataFrame into Google Sheet starting at cell A1
         set_with_dataframe(
             worksheet = worksheet,
