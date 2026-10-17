@@ -360,11 +360,11 @@ config.ini
 temp/
 
 scripts/**/*.pyc
-.service_account.json
 .client_secrets.json
 *.wal
 .token.json
 .whatsapp_bot.json
 .resend.json
+.*service_account.json
 
 data/.tmp.driveupload/*

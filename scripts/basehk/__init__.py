@@ -41,7 +41,8 @@ sys.stderr.reconfigure(encoding="utf-8")
 
 # read init
 analyst_ini_path = os.getenv("ANALYST_DATA_INI")
-resend_json_path = os.getenv("RESEND_JSON")
+resend_json_path = os.getenv("RESEND_JSON1")
+
 config = configparser.ConfigParser()
 
 if analyst_ini_path and os.path.exists(analyst_ini_path):

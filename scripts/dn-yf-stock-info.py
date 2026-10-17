@@ -7,6 +7,7 @@ from common.hkex_price_filler import HkexPriceFiller
 from common import market_parameter as marketParameter
 from common.ticker_extractor import TickerExtractor
 from common.yf_price_filler import YahooQueryPriceFiller
+from common.index_data_extractor import IndexDataExtractor
 
 def yfFillStockInfo(tickerMap, yahooQueryStockInfoFiller):
     errorRecords = yahooQueryStockInfoFiller.fill(tickerMap)
@@ -24,14 +25,15 @@ if __name__ == "__main__":
     config, dbHelper, avienUri = marketParameter.parse_argument()
 
     # load indexes
-    yahooQueryStockInfoFiller = YahooQueryStockInfoFiller(config, dbHelper)
-    yahooQueryStockInfoFiller.loadIndexDataByYahooFinance()
+    indexDataExtractor = IndexDataExtractor(config, dbHelper)
+    indexDataExtractor.loadIndexDataByYahooFinance()
 
     # extract Ticker from xls
     tickerExtractor = TickerExtractor(config, dbHelper)
     tickerMap = tickerExtractor.tickerMap()
 
     # fill stock info from yahoo query
+    yahooQueryStockInfoFiller = YahooQueryStockInfoFiller(config, dbHelper)    
     yfFillStockInfo(tickerMap, yahooQueryStockInfoFiller)
 
     # fill daily price
