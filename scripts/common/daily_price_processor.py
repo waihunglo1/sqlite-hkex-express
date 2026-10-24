@@ -454,6 +454,9 @@ class DailyPriceProcessor():
         query_date: str, 
         price_stats_list: List[Dict[str, Any]]
     ) -> None:
+        logging.info(
+            f"Normalization started for [{query_date}] ..."
+        )        
         """Computes cross-sectional percentile rankings across all symbols for a date."""
         if not price_stats_list:
             return
@@ -545,8 +548,8 @@ class DailyPriceProcessor():
             FROM 
               DAILY_STOCK_PRICE P, 
               STOCK S 
-            WHERE
-              P.symbol = S.symbol 
+            WHERE 1 = 1 
+              AND P.symbol = S.symbol 
               AND P.dt = ?
               {self.whereClause}
         """

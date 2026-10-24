@@ -25,7 +25,7 @@ Write-Host "=== Starting Script Executions ===" -ForegroundColor Cyan
 
 # 1. Run Python Script
 Write-Host "Running Python script 01" -ForegroundColor Yellow
-cmd /c "py scripts/dn-yf-stock-info.py --market us  2>&1" | Tee-Object -FilePath $LogFile -Append
+cmd /c "py scripts/dn-yf-stock-info.py --market us --fillstockinfo y 2>&1" | Tee-Object -FilePath $LogFile -Append
 Validate-PythonScript -Description "Running Python script 01"
 
 Write-Host "Running Python script 02" -ForegroundColor Yellow

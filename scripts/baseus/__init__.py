@@ -38,7 +38,7 @@ sys.stdout.reconfigure(encoding="utf-8")
 sys.stderr.reconfigure(encoding="utf-8")
 
 analyst_ini_path = os.getenv("ANALYST_DATA_INI")
-resend_json_path = os.getenv("RESEND_JSON")
+resend_json_path = os.getenv("RESEND_JSON1")
 config = configparser.ConfigParser()
 
 # read init

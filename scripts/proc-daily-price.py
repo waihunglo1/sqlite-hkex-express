@@ -15,8 +15,8 @@ if __name__ == "__main__":
     config, dbHelper, avienUri = marketParameter.parse_argument()
 
     try:
-        # latestTradingDate = helper.retrieveLatestTradingDate(config["YAHOO-FINANCE"], "%Y%m%d")
-        # logging.info(f"Trading date : {latestTradingDate}")
+        QUERY_DATE = config["PARAMETER"]["TRADE_DATE"]
+        logging.info(f"Trading date : {QUERY_DATE or 'NONE'}")
 
         # where clause
         where_clause_str = helper.sqlClean(config['DAILY_PRICE_PROCESSOR']['WHERE_CLAUSE'])

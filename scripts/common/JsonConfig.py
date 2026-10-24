@@ -5,7 +5,9 @@ from pathlib import Path
 class JsonConfig:
     def __init__(self, filePath:str):
         try:
-            with open(filePath, "r", encoding="utf-8") as f:
+            # Fix: Clean surrounding quotes and spaces before opening
+            clean_path = str(filePath).strip(' "')
+            with open(clean_path, "r", encoding="utf-8") as f:
                 self.config = json.load(f)
         except FileNotFoundError:
             logging.error(f"Configuration file not found at {filePath}")
@@ -13,6 +15,9 @@ class JsonConfig:
         except json.JSONDecodeError as e:
             logging.error(f"Error parsing JSON in {filePath}: {e}")
             raise
+        except Exception as e:
+            logging.error(f"Error parsing JSON in {filePath}: {e}")
+            raise        
 
     def populateToConfigMap(self, configMap, sectionName:str):
         keys = list(self.config.keys())

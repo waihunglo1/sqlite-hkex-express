@@ -10,6 +10,21 @@ def parse_argument():
         default="hk",
         help="Target market (hk or us)",
     )
+
+    parser.add_argument(
+        "--fillstockinfo",
+        choices=["y", "n"],
+        default="y",
+        help="fill stock info (y or n)",
+    )    
+
+    parser.add_argument(
+        "--tradedate",
+        default="",
+        help="trade date to process",
+    )    
+
+
     args = parser.parse_args()
 
     # 2. Dynamically import config and dbHelper based on market choice
@@ -24,5 +39,7 @@ def parse_argument():
 
     # Safely set the option
     config.set("PARAMETER", "MARKET", str(args.market))
+    config.set("PARAMETER", "FILL_STOCK_INFO", str(args.fillstockinfo))    
+    config.set("PARAMETER", "TRADE_DATE", str(args.tradedate))        
 
     return config, dbHelper, avienUri

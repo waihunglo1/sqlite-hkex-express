@@ -25,16 +25,19 @@ if __name__ == "__main__":
     config, dbHelper, avienUri = marketParameter.parse_argument()
 
     # load indexes
-    indexDataExtractor = IndexDataExtractor(config, dbHelper)
-    indexDataExtractor.loadIndexDataByYahooFinance()
-
-    # extract Ticker from xls
-    tickerExtractor = TickerExtractor(config, dbHelper)
-    tickerMap = tickerExtractor.tickerMap()
+    if config['PARAMETER']['FILL_STOCK_INFO'] == "y":
+        indexDataExtractor = IndexDataExtractor(config, dbHelper)
+        indexDataExtractor.loadIndexDataByYahooFinance()
 
     # fill stock info from yahoo query
-    yahooQueryStockInfoFiller = YahooQueryStockInfoFiller(config, dbHelper)    
-    yfFillStockInfo(tickerMap, yahooQueryStockInfoFiller)
+    if config['PARAMETER']['FILL_STOCK_INFO'] == "y":
+        # extract Ticker from xls
+        tickerExtractor = TickerExtractor(config, dbHelper)
+        tickerMap = tickerExtractor.tickerMap()
+
+        # fill stock info from yahoo query
+        yahooQueryStockInfoFiller = YahooQueryStockInfoFiller(config, dbHelper)    
+        yfFillStockInfo(tickerMap, yahooQueryStockInfoFiller)
 
     # fill daily price
     if config['PARAMETER']['MARKET'] == "us":
