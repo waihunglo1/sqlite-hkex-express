@@ -26,7 +26,7 @@ def cleanDf(config, items):
     # Convert date to standard YYYYMMDD string format
     # formatted_date = pd.to_datetime(raw_date).strftime("%Y%m%d")
     try:
-        formatted_date = helper.retrieveLatestTradingDate(config["YAHOO-FINANCE"], "%Y%m%d")
+        formatted_date = helper.retrieveLatestTradingDate2(config["YAHOO-FINANCE"], "%Y%m%d")
         logging.info(f"📅 Extracted Trade Date: {formatted_date}")
 
         # Build DataFrame from raw items

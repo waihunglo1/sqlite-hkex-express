@@ -18,6 +18,7 @@ from datetime import date, timedelta, timezone
 from contextlib import contextmanager
 from pathlib import Path
 from urllib.parse import urlsplit
+from yahooquery import Ticker
 
 # Define the number of days for the cutoff
 days_cutoff = 6
@@ -341,6 +342,32 @@ def retrieveLatestTradingDate(config, format:str="%Y-%m-%d"):
     last_trading_date = recent_data.index[-1].strftime(format)
 
     logging.info(f"The latest {yfProductStr} trading date was: {last_trading_date}")
+    return last_trading_date
+
+def retrieveLatestTradingDate2(config, format: str = "%Y-%m-%d") -> str:
+    yfProductStr = config["LATEST_TRADING_DATE_PRODUCT"]
+
+    # 1. Fetch history via yahooquery Ticker
+    ticker = Ticker(yfProductStr)
+    recent_data = ticker.history(period="5d")
+
+    # 2. Check if data was returned
+    if recent_data is None or recent_data.empty:
+        raise ValueError(
+            f"No market history data returned for symbol: {yfProductStr}"
+        )
+
+    # 3. Extract the last date row
+    # yahooquery returns a multi-index (symbol, date) DataFrame; reset index gets 'date' as a column
+    recent_data_reset = recent_data.reset_index()
+
+    # Get the latest timestamp from the 'date' column
+    latest_timestamp = pd.to_datetime(recent_data_reset["date"].iloc[-1])
+    last_trading_date = latest_timestamp.strftime(format)
+
+    logging.info(
+        f"The latest {yfProductStr} trading date was: {last_trading_date}"
+    )
     return last_trading_date
 
 def send_execution_report(config, subject: str, body_html: str) -> None:

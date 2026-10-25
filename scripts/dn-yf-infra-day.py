@@ -14,7 +14,7 @@ from common.daily_price_processor import DailyPriceProcessor
 if __name__ == "__main__": 
     config, dbHelper, avienUri =  marketParameter.parse_argument()
 
-    latestTradingDate = helper.retrieveLatestTradingDate(config["YAHOO-FINANCE"], "%Y%m%d")
+    latestTradingDate = helper.retrieveLatestTradingDate2(config["YAHOO-FINANCE"], "%Y%m%d")
     logging.info(f"Trading date : {latestTradingDate}")
 
     # fill price

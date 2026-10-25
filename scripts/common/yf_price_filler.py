@@ -19,7 +19,7 @@ class YahooQueryPriceFiller(PriceFiller):
         historyConfig = self.config['YAHOO-FINANCE']
         selected_period = historyConfig["SELECTED_PERIOD"]
         batch_size = int(historyConfig["BATCH_SIZE"] or 50)
-        latest_trading_date = helper.retrieveLatestTradingDate(historyConfig)
+        latest_trading_date = helper.retrieveLatestTradingDate2(historyConfig)
 
         tickers_list = self.dbHelper.fetchTickers("1 = 1")
         total_tickers = len(tickers_list)
