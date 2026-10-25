@@ -279,16 +279,6 @@ def create_directory_if_not_exists(directory_path: str):
     except Exception as error:
         logging.error(f"Error creating directory: {error}")
 
-def prettyPrint(sectors):
-    df = pd.DataFrame(sectors)
-    # Clean up column names and nulls
-    df.columns = ["Sector", "Count"]
-    df["Sector"] = df["Sector"].replace("", "UNASSIGNED").fillna("UNASSIGNED")
-
-    # Print clean string representation
-    log_table = df.to_markdown(index=False, tablefmt="plain")
-    logging.info(f"\nSector Summary:\n{log_table}")
-
 @contextmanager
 def time_it(task_name: str):
     """

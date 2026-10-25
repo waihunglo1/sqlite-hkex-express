@@ -14,7 +14,7 @@ class YahooQueryStockInfoFiller():
         self.country = config["YAHOO-FINANCE"]["TICKER_COUNTRY"]
         self.indexes = helper.splitStringToArray(config["YAHOO-FINANCE"]["INDEXES"])
 
-    def fill(self, tickerMap):
+    def _fillData(self, tickerMap):
         # Split ticker_list into batches of 100 items
         errorRecords = []
         batch_size = 100
@@ -90,4 +90,34 @@ class YahooQueryStockInfoFiller():
             return updated
 
         return 0
+
+    def fill(self, tickerMap):
+        errorRecords = self._fillData(tickerMap)
+        if len(errorRecords) > 0:
+            df = pd.DataFrame(errorRecords)
+            logging.info("\n" + df.to_markdown(index=False).strip())
+
+        # pretty print sector
+        self.dumpSectorStatistics()
+
+    def dumpSectorStatistics(self):
+        # price history row
+        sql_query = """
+            SELECT sector, count(1) 
+            FROM stock
+            group by sector
+            order by sector 
+        """
+        sectors = self.dbHelper.fetchAllRows(sql_query)
+        self.prettyPrint(sectors)        
+
+    def prettyPrint(self, sectors):
+        df = pd.DataFrame(sectors)
+        # Clean up column names and nulls
+        df.columns = ["Sector", "Count"]
+        # df["Sector"] = df["Sector"].replace("", "UNASSIGNED").fillna("UNASSIGNED")
+
+        # Print clean string representation
+        log_table = df.to_markdown(index=False, tablefmt="plain")
+        logging.info(f"\nSector Summary:\n{log_table}")      
 

@@ -236,17 +236,6 @@ class BaseDbHelper(ABC):
 
         return updated
 
-    def dumpSectorStatistics(self):
-        # price history row
-        sectorSql = """
-            SELECT sector, count(1) 
-            FROM stock
-            group by sector
-            order by sector 
-        """
-        sectors = self.fetchAllRows(sectorSql)
-        helper.prettyPrint(sectors)
-
     def fetchAllRows(self, sql: str, params: tuple | list | dict = ()):
         cleaned = sql.replace("\r", " ").replace("\n", " ")
         try:
