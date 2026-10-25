@@ -120,11 +120,14 @@ def splitStringToArray(input):
 def populate_df(df, spreadSheetId:str, workSheetId:str):
     # 2. 連接 Google Sheets 並寫入資料
     gspread_json_path = os.getenv("GSPREAD_JSON")
-    logging.info(f"正在連接 Google Sheets... : {gspread_json_path}")
+    # Fix: Clean surrounding quotes and spaces before opening
+    clean_path = str(gspread_json_path).strip(' "')
+        
+    logging.info(f"正在連接 Google Sheets... : {clean_path}")
 
     try:
         # google spreadsheet
-        gc = gspread.service_account(filename = gspread_json_path)
+        gc = gspread.service_account(filename = clean_path)
         sh = gc.open_by_key(spreadSheetId)
 
         # 3. Get the Spreadsheet File Name

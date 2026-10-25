@@ -117,7 +117,7 @@ class StatisticsProcessor:
     # -------------------------------------------------------------------------
     # Industry Statistics
     # -------------------------------------------------------------------------
-    def populateIndustryStatistics(self, config: Dict[str, Any]) -> pd.DataFrame:
+    def populateIndustryStatistics01(self, config: Dict[str, Any]) -> pd.DataFrame:
         sql_query = config["STATISTICS_INDUSTRY_ANALYSIS"]["SQL.01"]
         df_raw = self.dbHelper.readDataFrame(sql_query)
 
@@ -170,9 +170,110 @@ class StatisticsProcessor:
         logging.info("Industry Statistics:\n" + combined_df.iloc[:5, :10].to_string())
         return combined_df
 
-    def doIndustryStatistic(self, config: Dict[str, Any]) -> None:
-        df = self.populateIndustryStatistics(config)
+    def doIndustryStatistic01(self, config: Dict[str, Any]) -> None:
+        df = self.populateIndustryStatistics01(config)
         self._export_to_gsheet(df, config["STATISTICS_INDUSTRY_ANALYSIS"])
+
+    def populateIndustryStatistics02(
+            self, config: Dict[str, Any]
+        ) -> pd.DataFrame:
+        sql_query = config["STATISTICS_INDUSTRY_ANALYSIS_MOMENTUM"]["SQL.01"]
+        df_raw = self.dbHelper.readDataFrame(sql_query)
+
+        if df_raw.empty:
+            logging.info(
+                "⚠️ No data returned for STATISTICS_INDUSTRY_ANALYSIS_MOMENTUM. Skipping."
+            )
+            return pd.DataFrame()
+
+        # 1. Clean 'sector' and 'industry' columns (strip whitespace, set empty strings/spaces to NaN)
+        df_raw["sector"] = df_raw["sector"].astype(str).str.strip()
+        df_raw["industry"] = df_raw["industry"].astype(str).str.strip()
+
+        # 2. Filter out rows where sector/industry is NaN, 'None', 'nan', or empty string ''
+        invalid_values = {"", "nan", "none", "null", "n/a"}
+        mask = (
+            df_raw["sector"].notna()
+            & ~df_raw["sector"].str.lower().isin(invalid_values)
+            & df_raw["industry"].notna()
+            & ~df_raw["industry"].str.lower().isin(invalid_values)
+        )
+        df_raw = df_raw[mask]
+
+        if df_raw.empty:
+            logging.info(
+                "⚠️ No valid sector/industry data remaining after cleaning. Skipping."
+            )
+            return pd.DataFrame()
+
+        df_pivoted = (
+            df_raw.pivot_table(
+                index=["sector", "industry"],
+                columns="dt",
+                values="noofstockmtm",
+            )
+            .fillna(0)
+            .sort_index(axis=1, ascending=False)
+        )
+
+        latest_dt = df_pivoted.columns[0]
+        df_pivoted = df_pivoted.sort_values(
+            by=latest_dt, ascending=False
+        ).reset_index()
+        df_pivoted.columns.name = None
+
+        logging.info(
+            "Industry 02 Statistics:\n"
+            + df_pivoted.iloc[:5, :10].to_string()
+        )
+        return df_pivoted
+
+    def populateSectorStatistics02(self, config: Dict[str, Any], aggfunc: str = "sum") -> pd.DataFrame:
+        sql_query = config["STATISTICS_INDUSTRY_ANALYSIS_MOMENTUM"]["SQL.01"]
+        df_raw = self.dbHelper.readDataFrame(sql_query)
+
+        if df_raw.empty:
+            logging.info("⚠️ No data returned. Skipping.")
+            return pd.DataFrame()
+
+        # 1. Clean 'sector' column
+        df_raw["sector"] = df_raw["sector"].astype(str).str.strip()
+        invalid_values = {"", "nan", "none", "null", "n/a"}
+        df_raw = df_raw[
+            df_raw["sector"].notna() & 
+            ~df_raw["sector"].str.lower().isin(invalid_values)
+        ]
+
+        if df_raw.empty:
+            logging.info("⚠️ No valid sector data remaining. Skipping.")
+            return pd.DataFrame()
+
+        # 2. Pivot by sector only with aggregation (sum or mean)
+        df_pivoted = (
+            df_raw.pivot_table(
+                index="sector",
+                columns="dt",
+                values="noofstockmtm",
+                aggfunc=aggfunc,  # "sum" to total across industries, or "mean" for average
+                fill_value=0
+            )
+            .sort_index(axis=1, ascending=False)
+        )
+
+        # 3. Sort by latest trading date descending and flatten index
+        latest_dt = df_pivoted.columns[0]
+        df_pivoted = df_pivoted.sort_values(by=latest_dt, ascending=False).reset_index()
+        df_pivoted.columns.name = None
+
+        logging.info("Sector Statistics:\n" + df_pivoted.iloc[:5, :10].to_string())
+        return df_pivoted    
+    
+    def doIndustryStatistic02(self, config: Dict[str, Any]) -> None:
+        df = self.populateIndustryStatistics02(config)
+        self._export_to_gsheet(df, config["STATISTICS_INDUSTRY_ANALYSIS_MOMENTUM"])      
+
+        df = self.populateSectorStatistics02(config)
+        self._export_to_gsheet(df, config["STATISTICS_SECTOR_ANALYSIS_MOMENTUM"]) 
 
     # -------------------------------------------------------------------------
     # StockCharts ETF Relative Strength
