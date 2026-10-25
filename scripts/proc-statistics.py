@@ -16,8 +16,11 @@ if __name__ == "__main__":
     if config['PARAMETER']['MARKET'] == "us":
         processor.populateStockChartsETFRelativeStrength(config)
 
-    # processor.doMarketAnalysis(config)
-    # processor.doStockAnalysis(config)
-    # processor.doIndustryStatistic01(config)
+    # sector and industry
+    processor.doMarketAnalysis(config)
+    processor.doIndustryStatistic01(config)
     processor.doIndustryStatistic02(config)
-    # processor.populateAvien(config)
+
+    # stock analysis
+    processor.doStockAnalysis(config)
+    processor.populateAvien(config)

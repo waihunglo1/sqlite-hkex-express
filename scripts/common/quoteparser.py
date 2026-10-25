@@ -259,10 +259,16 @@ class QuoteParser:
 
         # Stream text via StringIO
         string_stream = io.StringIO("".join(fonts))
-
         quote_date, prices = self.process_line_by_line(string_stream)
         updated = sqlitehelper.insertOrReplacePriceRecords(prices)
 
         logging.info(f"[{file_path}] {quote_date} : {len(prices)} / Updated : {updated}")
         df = pd.DataFrame(prices)
-        logging.info("\n" + df.head(5).to_string())
+
+        if df.empty:
+            logging.info(f"no price data for {file_path} / {quote_date}")
+        else:            
+            logging.info("\n" + df.head(5).to_string())
+
+
+        return updated

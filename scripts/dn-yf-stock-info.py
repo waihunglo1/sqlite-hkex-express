@@ -41,9 +41,10 @@ if __name__ == "__main__":
 
     # fill daily price
     if config['PARAMETER']['MARKET'] == "us":
-        priceFiller = YahooQueryPriceFiller(dbHelper=dbHelper)
-        priceFiller.fillPriceByConfig(config['YAHOO-FINANCE'])
+        priceFiller = YahooQueryPriceFiller(config, dbHelper=dbHelper)
     else:
-        hkexPriceFiller = HkexPriceFiller(config, dbHelper)
-        hkexPriceFiller.fill()
+        priceFiller = HkexPriceFiller(config, dbHelper=dbHelper)
+
+    rowUpdate = priceFiller.fill() 
+    priceFiller.dumpStatistics()
 

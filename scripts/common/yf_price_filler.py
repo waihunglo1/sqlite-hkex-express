@@ -8,12 +8,15 @@ from yahooquery import Ticker
 from . import basedbhelper as dbHelper
 from common import gsheethelper as gsheetHelper
 from . import utility as helper
+from common.daily_price_filler import PriceFiller
 
-class YahooQueryPriceFiller():
-    def __init__(self, dbHelper):
+class YahooQueryPriceFiller(PriceFiller):
+    def __init__(self, config, dbHelper):
         self.dbHelper = dbHelper
+        self.config = config
 
-    def fillPriceByConfig(self, historyConfig):
+    def fill(self):
+        historyConfig = self.config['YAHOO-FINANCE']
         selected_period = historyConfig["SELECTED_PERIOD"]
         batch_size = int(historyConfig["BATCH_SIZE"] or 50)
         latest_trading_date = helper.retrieveLatestTradingDate(historyConfig)

@@ -4,8 +4,9 @@ import logging
 import re
 from . import utility as helper
 from common.quoteparser import QuoteParser
+from common.daily_price_filler import PriceFiller
 
-class HkexPriceFiller():
+class HkexPriceFiller(PriceFiller):
     def __init__(self, config, dbHelper):
         self.dbHelper = dbHelper
         self.config = config
@@ -31,7 +32,8 @@ class HkexPriceFiller():
         """Traverses configured directory for HKEX files and processes them."""
         hkex_path = os.path.join(os.getcwd(), self.config["TICKERS"]["DOWNLOAD_PATH"])
         file_regex = re.compile(r"^d(\d{6})e\.htm$")
-
+        rowUpdate = 0
+        
         if not os.path.exists(hkex_path):
             logging.error(f"Directory does not exist: {hkex_path}")
         else:
@@ -53,7 +55,9 @@ class HkexPriceFiller():
 
                 if file_regex.match(file_name):
                     quoteParser = QuoteParser()
-                    quoteParser.parse_hkex_file(self.dbHelper, file_full_path)
+                    rowUpdate += quoteParser.parse_hkex_file(self.dbHelper, file_full_path)
+
+        return rowUpdate
 
     def fill(self):
         hkexConfig = self.config["TICKERS"]
@@ -62,4 +66,4 @@ class HkexPriceFiller():
         self.downloadHistoricalQuoteFile(hkexConfig)
 
         # traverse each files from directory and store in db
-        self.traverse_dir()
+        return self.traverse_dir()
