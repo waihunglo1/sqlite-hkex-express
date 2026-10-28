@@ -126,9 +126,24 @@ class StatisticsProcessor:
             return pd.DataFrame()
 
         # Create pivots for up, down, and 50d SMA %
-        up_pivot = df_raw.pivot_table(index="industry", columns="dt", values="up4pct1d", aggfunc="sum").fillna(0)
-        dn_pivot = df_raw.pivot_table(index="industry", columns="dt", values="dn4pct1d", aggfunc="sum").fillna(0)
-        sma_pivot = df_raw.pivot_table(index="industry", columns="dt", values="above_50d_sma_pct", aggfunc="sum").fillna(0)
+        up_pivot = df_raw.pivot_table(
+                index=["sector", "industry"], 
+                columns="dt", 
+                values="up4pct1d", 
+                aggfunc="sum"
+            ).fillna(0)
+        dn_pivot = df_raw.pivot_table(
+                index=["sector", "industry"], 
+                columns="dt", 
+                values="dn4pct1d", 
+                aggfunc="sum"
+            ).fillna(0)
+        sma_pivot = df_raw.pivot_table(
+                index=["sector", "industry"], 
+                columns="dt", 
+                values="above_50d_sma_pct", 
+                aggfunc="sum"
+            ).fillna(0)
 
         # Sort dates descending (newest first)
         unique_dates = sorted(up_pivot.columns, reverse=True)
@@ -160,10 +175,18 @@ class StatisticsProcessor:
         # Sort and rearrange columns
         combined_df = combined_df.sort_values(by=["up_day1", "total_up_90d"], ascending=[False, False]).reset_index()
 
-        ordered_columns = ["industry"]
+        ordered_columns = ["sector", "industry"]
         for i in range(1, 91):
-            ordered_columns.extend([f"up_day{i}", f"down_day{i}", f"sma50_day{i}"])
-        ordered_columns.extend(["total_up_90d", "total_down_90d", "total_sma50_90d"])
+            ordered_columns.extend([f"up_day{i}"])
+        ordered_columns.extend(["total_up_90d"])
+
+        for i in range(1, 91):
+            ordered_columns.extend([f"down_day{i}"])
+        ordered_columns.extend(["total_down_90d"])
+
+        for i in range(1, 91):
+            ordered_columns.extend([f"sma50_day{i}"])
+        ordered_columns.extend(["total_sma50_90d"])        
 
         combined_df = combined_df[ordered_columns]
 

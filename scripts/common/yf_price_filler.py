@@ -25,6 +25,7 @@ class YahooQueryPriceFiller(PriceFiller):
         tickers_list = self.dbHelper.fetchTickers("1 = 1")
         total_tickers = len(tickers_list)
         logging.info(f"No of Tickers to load from yahoo : {total_tickers} / batch size : {batch_size}")
+        logging.info(f"Selected Period : {selected_period}. End Date : {latest_trading_date}.")
         updatedCount = 0
         errorRecords = []
 
@@ -38,7 +39,7 @@ class YahooQueryPriceFiller(PriceFiller):
 
         try:
             sleep = random.uniform(1, 10)
-            logging.info(f"Requesting data for {len(tickerList)} tickers. Selected Period : {selected_period}. End Date : {latest_trading_date}. Time to wait: {sleep:.2f}s")
+            logging.info(f"Requesting data for {len(tickerList)} tickers. Time to wait: {sleep:.2f}s")
             time.sleep(sleep)
 
             # query historical data by yahooQuery
