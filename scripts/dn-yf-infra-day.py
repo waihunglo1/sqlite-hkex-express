@@ -18,8 +18,9 @@ if __name__ == "__main__":
     logging.info(f"Trading date : {latestTradingDate}")
 
     # fill price
-    priceFiller = YahooQueryPriceFiller(dbHelper=dbHelper)
-    priceFiller.fillPriceByConfig(config['YAHOO-FINANCE'])
+    priceFiller = YahooQueryPriceFiller(config, dbHelper=dbHelper)
+    priceFiller.fill("1d")
+    priceFiller.dumpStatistics()
 
     # process price
     # where clause

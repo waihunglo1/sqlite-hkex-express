@@ -20,8 +20,9 @@ def parse_argument():
 
     parser.add_argument(
         "--tradedate",
-        default="",
-        help="trade date to process",
+        choices=["y", "n"],        
+        default="n",
+        help="retrieve market last trade date",
     )    
 
 

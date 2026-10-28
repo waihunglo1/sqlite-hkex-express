@@ -2,7 +2,6 @@ require('dotenv').config();
 
 const fs = require('fs');
 const path = require('path');
-const util = require('util');
 const extract = require('extract-zip')
 const { mkdir } = require('node:fs/promises');
 const sqliteHelper = require('./sqliteHelper.js');

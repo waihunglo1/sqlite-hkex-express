@@ -29,7 +29,7 @@ cmd /c "py scripts/dn-yf-stock-info.py --market hk  2>&1" | Tee-Object -FilePath
 Validate-PythonScript -Description "Running Python script 01"
 
 Write-Host "Running Python script 02" -ForegroundColor Yellow
-cmd /c "py scripts/proc-daily-price.py --market hk 2>&1" | Tee-Object -FilePath $LogFile -Append
+cmd /c "py scripts/proc-daily-price.py --market hk --tradedate y 2>&1" | Tee-Object -FilePath $LogFile -Append
 Validate-PythonScript -Description "Running Python script 02"
 
 Write-Host "Running Python script 03" -ForegroundColor Yellow

@@ -15,9 +15,10 @@ class YahooQueryPriceFiller(PriceFiller):
         self.dbHelper = dbHelper
         self.config = config
 
-    def fill(self):
+    def fill(self, selected_period:str | None = None):
         historyConfig = self.config['YAHOO-FINANCE']
-        selected_period = historyConfig["SELECTED_PERIOD"]
+        if selected_period is None:
+            selected_period = historyConfig["SELECTED_PERIOD"]
         batch_size = int(historyConfig["BATCH_SIZE"] or 50)
         latest_trading_date = helper.retrieveLatestTradingDate2(historyConfig)
 
@@ -37,7 +38,7 @@ class YahooQueryPriceFiller(PriceFiller):
 
         try:
             sleep = random.uniform(1, 10)
-            logging.info(f"Requesting data for {len(tickerList)} tickers. time to wait: {sleep:.2f}s")
+            logging.info(f"Requesting data for {len(tickerList)} tickers. Selected Period : {selected_period}. End Date : {latest_trading_date}. Time to wait: {sleep:.2f}s")
             time.sleep(sleep)
 
             # query historical data by yahooQuery
