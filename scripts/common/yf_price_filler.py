@@ -32,16 +32,14 @@ class YahooQueryPriceFiller(PriceFiller):
         for i in range(0, total_tickers, batch_size):
             batch = tickers_list[i : i + batch_size]
             updatedCount += self.fillHistPriceByYahooQuery(batch, errorRecords, latest_trading_date, selected_period)
-            logging.info(f"正在處理第 {i//batch_size + 1} 批 / 共 {math.ceil(total_tickers/batch_size)} 批 / Update : {updatedCount} / Error : {len(errorRecords)}")
+            sleep = random.uniform(1, 10)
+            time.sleep(sleep)
+            logging.info(f"正在處理第 {i//batch_size + 1} 批 / 共 {math.ceil(total_tickers/batch_size)} 批 / Update : {updatedCount} / Error : {len(errorRecords)} / Time to wait: {sleep:.2f}s")
 
     def fillHistPriceByYahooQuery(self, tickerList, errorRecords, latest_trading_date, selected_period='2y'):
         updatedCount = 0
 
         try:
-            sleep = random.uniform(1, 10)
-            logging.info(f"Requesting data for {len(tickerList)} tickers. Time to wait: {sleep:.2f}s")
-            time.sleep(sleep)
-
             # query historical data by yahooQuery
             tickers_data = Ticker(tickerList, asynchronous=True) 
             hist = tickers_data.history(period=selected_period, interval='1d', end=latest_trading_date)

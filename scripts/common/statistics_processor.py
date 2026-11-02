@@ -319,7 +319,7 @@ class StatisticsProcessor:
         df_pivoted.columns.name = None
 
         logging.info("Stock chart ETF RS Statistics:\n" + df_pivoted.iloc[:5, :10].to_string())
-        self._export_to_gsheet(df_raw, config["STATISTICS_INDUSTRY_ANALYSIS"])
+        self._export_to_gsheet(df_pivoted, config["STATISTICS_ETF_ANALYSIS"])
 
     # -------------------------------------------------------------------------
     # PostgreSQL / Aiven Integration
